@@ -116,4 +116,6 @@ $LANG['SEARCH_BY_TAXON'] = 'Search by Taxon';
 $LANG['OCCURENCE_IDENTIFIER'] = 'Catalog Number';
 $LANG['TAXON'] = 'Taxon';
 $LANG['OCCURRENCE_EDITOR'] = 'Edit';
+$LANG['CITATION'] = 'Cite this collection:';
+
 ?>

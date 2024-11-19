@@ -662,6 +662,20 @@ if ($SYMB_UID) {
 							</ul>
 						</section>
 						<?php
+				if (file_exists($SERVER_ROOT . '/includes/citationcollection.php')) {
+					echo '<div class="field-div"><span class="label">';
+					echo (isset($LANG['CITATION']) ? $LANG['CITATION'] : 'Cite this collection:');
+					echo'</span><blockquote>';
+					// If GBIF dataset key is available, fetch GBIF format from API
+					if ($collData['publishtogbif'] && $datasetKey && file_exists($SERVER_ROOT . '/includes/citationgbif.php')) {
+						$gbifUrl = 'http://api.gbif.org/v1/dataset/' . $datasetKey;
+						$responseData = json_decode(file_get_contents($gbifUrl));
+						$collData['gbiftitle'] = $responseData->title;
+						$collData['doi'] = $responseData->doi;
+						$_SESSION['colldata'] = $collData;
+						include($SERVER_ROOT . '/includes/citationgbif.php');
+					} else {
+						include($SERVER_ROOT . '/includes/citationcollection.php');
 					}
 				}
 			}

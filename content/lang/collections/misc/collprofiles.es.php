@@ -116,4 +116,7 @@ $LANG['SEARCH_BY_TAXON'] = 'Buscar por taxón';
 $LANG['OCCURENCE_IDENTIFIER'] = 'Número de Catálogo';
 $LANG['TAXON'] = 'Taxón';
 $LANG['OCCURRENCE_EDITOR'] = 'Editar';
+$LANG['CITATION'] = 'Cite esta colecci&oacute;n:';
+$LANG['DAT_EDIT'] = 'Panel de Control de Edici&oacute;n de Datos';
+
 ?>
