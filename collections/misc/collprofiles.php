@@ -662,20 +662,6 @@ if ($SYMB_UID) {
 							</ul>
 						</section>
 						<?php
-				if (file_exists($SERVER_ROOT . '/includes/citationcollection.php')) {
-					echo '<div class="field-div"><span class="label">';
-					echo (isset($LANG['CITATION']) ? $LANG['CITATION'] : 'Cite this collection:');
-					echo'</span><blockquote>';
-					// If GBIF dataset key is available, fetch GBIF format from API
-					if ($collData['publishtogbif'] && $datasetKey && file_exists($SERVER_ROOT . '/includes/citationgbif.php')) {
-						$gbifUrl = 'http://api.gbif.org/v1/dataset/' . $datasetKey;
-						$responseData = json_decode(file_get_contents($gbifUrl));
-						$collData['gbiftitle'] = $responseData->title;
-						$collData['doi'] = $responseData->doi;
-						$_SESSION['colldata'] = $collData;
-						include($SERVER_ROOT . '/includes/citationgbif.php');
-					} else {
-						include($SERVER_ROOT . '/includes/citationcollection.php');
 					}
 				}
 			}
@@ -717,7 +703,7 @@ if ($SYMB_UID) {
 					include($SERVER_ROOT . '/includes/citationcollection.php');
 				}
 				echo '</blockquote></div>';
-			}
+			} 
 			if ($addrArr = $collManager->getAddress()) {
 				?>
 				<section class="fieldset-like no-left-margin">
@@ -936,7 +922,7 @@ if ($SYMB_UID) {
 			</form>
 			</div>
 			<div>
-				<span class="button button-primary">
+				<span class="button button-primary bottom-breathing-room-rel">
 					<a id="image-search" href="<?= $CLIENT_ROOT ?>/imagelib/search.php?submitaction=search&db[]=<?= $collid ?>" ><?= $LANG['IMAGE_SEARCH_THIS_COLLECTION'] ?></a>
 				</span>
 			</div>
