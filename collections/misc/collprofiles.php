@@ -914,12 +914,12 @@ if ($SYMB_UID) {
 			include('collprofilestats.php');
 			?>
 			<div style="margin-bottom: 2rem;">
-			<form action="<?= $actionPage ?>">
-				<input hidden id="'<?= 'coll-' . $collid . '-' ?>'" name="db[]" class="specobs" value='<?= $collid ?>' type="checkbox" onclick="selectAll(this);" checked />
-				<button type="submit" class="button button-primary">
-					<?= $LANG['ADVANCED_SEARCH_THIS_COLLECTION'] ?>
-				</button>
-			</form>
+				<form name="coll-search-form" action="<?= $actionPage ?>" method="get">
+					<input name="db" value="<?= $collid ?>" type="hidden">
+					<button type="submit" class="button button-primary">
+						<?= $LANG['ADVANCED_SEARCH_THIS_COLLECTION'] ?>
+					</button>
+				</form>
 			</div>
 			<div>
 				<span class="button button-primary bottom-breathing-room-rel">
