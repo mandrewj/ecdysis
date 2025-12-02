@@ -117,4 +117,6 @@ $LANG['OCCURENCE_IDENTIFIER'] = 'Número de Catálogo';
 $LANG['TAXON'] = 'Taxón';
 $LANG['OCCURRENCE_EDITOR'] = 'Editar';
 $LANG['INFO_ALT'] = "Icono de información que indica un enlace a información sobre importación/actualización";
+$LANG['CITATION'] = 'Cite esta colecci&oacute;n:';
+$LANG['DAT_EDIT'] = 'Panel de Control de Edici&oacute;n de Datos';
 ?>

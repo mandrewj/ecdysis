@@ -117,4 +117,5 @@ $LANG['OCCURENCE_IDENTIFIER'] = 'Catalog Number';
 $LANG['TAXON'] = 'Taxon';
 $LANG['OCCURRENCE_EDITOR'] = 'Edit';
 $LANG['INFO_ALT'] = "Info. icon indicating link to information about import/update";
+$LANG['CITATION'] = 'Cite this collection:';
 ?>
