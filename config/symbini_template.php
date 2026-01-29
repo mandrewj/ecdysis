@@ -42,6 +42,10 @@ $TESSERACT_PATH = ''; 			//Needed for OCR function in the occurrence editor page
 $NLP_LBCC_ACTIVATED = 0;
 $NLP_SALIX_ACTIVATED = 0;
 
+// Vouchervision OCR/Transcription
+$VOUCHERVISION_API_KEY = ''; // API key to use to access Vouchervision API. See https://leafmachine.org/vouchervisiongo/
+$VOUCHERVISION_API_URL = 'https://vouchervision-go-738307415303.us-central1.run.app/process-url'; // URL to the Vouchervision API server
+
 //Module activations
 $OCCURRENCE_MOD_IS_ACTIVE = 1;
 $FLORA_MOD_IS_ACTIVE = 1;
@@ -77,6 +81,14 @@ $ACTIVATE_GEOLOCATE_TOOLKIT = 0;	//Activates GeoLocate Toolkit located within th
 $SEARCH_BY_TRAITS = 0;				//Activates search fields for searching by traits (if trait data have been encoded): 0 = trait search off; any number of non-zeros separated by commas (e.g., '1,6') = trait search on for the traits with these id numbers in table tmtraits.
 $CALENDAR_TRAIT_PLOTS = 0;			//Activates polar plots, in taxon profile, of the trait states listed: 0 = no plot; any number of non-zeros separated by commas (e.g., '1,6') = plots appear for the trait states with these id numbers (in table tmstates).
 
+$ACTIVATE_PALEO = 0; 				//Activates Paleo management (e.g. Geological Context fields)
+//$AUTH_PROVIDER = 'oid';           //Activate Third Party Authentication using openID Connect (Addiotnal paramters defined in auth_config.php).  Leave this commented out if not in use;
+$IGSN_ACTIVATION = 0;
+$WIKIPEDIA_TAXON_TAB = 1;			//Activates wikipedia tab on taxon profile page (wikiMedia API)
+$OVERRIDE_DOWNLOAD_LOGIN_REQUIREMENT = 0;	//0 = Login required for downloading occurrence data (default), 1 = occurrence data download allowed without being logged in
+
+$SEARCHABLE_CHARACTERS = '';			//List of characters that can be searched from the public search, separated by commas, e.g. '1,6'
+
 //$SMTP_ARR = array('host'=>'','port'=>587,'username'=>'','password'=>'','timeout'=>60);  //Host is requiered, others are optional and can be removed
 
 $RIGHTS_TERMS = array(
@@ -93,6 +105,7 @@ $SHOULD_BE_ABLE_TO_CREATE_PUBLIC_USER = true;
 $SYMBIOTA_LOGIN_ENABLED = true;
 
 $SHOULD_INCLUDE_CULTIVATED_AS_DEFAULT=false;
+$SHOULD_PROTECT_CULTIVATED = false; // if true, taxa with locality security that have cultivation status === 1 will have recordSecurity set to 1 in the protectGlobalSpecies function
 $AUTH_PROVIDER = 'oid';
 $LOGIN_ACTION_PAGE = 'openIdAuth.php';
 $SHOULD_USE_HARVESTPARAMS = false;
@@ -112,7 +125,16 @@ $PRIVATE_VIEWING_OVERRIDES = ['/index.php', '/misc/contacts.php','/misc/aboutpro
 // label : String - Short text label to describe the overlay toggle
 // popup_template: String - Html string for what label should be generated on a GeoJSON feature. Will replace text like `[Property_name]` with a features property value if present
 // template_properties: Array[String] - List of property names to used in popup generation
-$GEO_JSON_LAYERS = [];
+$GEO_JSON_LAYERS = [
+ [
+  'filename' => 'us_counties.geojson',
+  'label' => 'U.S. Counties',
+  'popup_template' => '<div>[NAME]</div>',
+  'template_properties' => [
+   'NAME',
+  ]
+ ],
+];
 
 // Toggles `strict-transport-security` header
 // Do not turn off for production portals

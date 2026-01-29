@@ -48,13 +48,13 @@ $includeImgs = isset($_REQUEST['imgs']) && !$_REQUEST['imgs'] ? 0 : 1;
 $includeAttributes = !empty($_REQUEST['attr']) ? 1 : 0;
 $includeMaterialSample = !empty($_REQUEST['matsample']) ? 1 : 0;
 $includeIdentifiers = !empty($_REQUEST['ident']) ? 1 : 0;
+$includeAssociations = !empty($_REQUEST['assoc']) ? 1 : 0;
 $pubGuid = array_key_exists('publicationguid', $_REQUEST) ? $_REQUEST['publicationguid'] : 0;
 $requestPortalGuid = array_key_exists('portalguid', $_REQUEST) ? $_REQUEST['portalguid'] : 0;
 
 $_SESSION['citationvar'] = 'collid=' . $collid;
 
 $dwcaHandler = new DwcArchiverCore();
-
 $dwcaHandler->setVerboseMode(0);
 $dwcaHandler->setCollArr($collid, $collType);
 
@@ -96,6 +96,11 @@ if ($cond) {
 		}
 	}
 }
+if(!$collid && !$cond) exit('Filter conditions required');
+if(!$dwcaHandler->isAuthorized()){
+	//Basic lockdown of function to limited number of users until functionality is fully integrated into Symbiota 4.0 API with enhanced security applied
+	exit('Not authorized');
+}
 $dwcaHandler->setSchemaType($schemaType);
 $dwcaHandler->setExtended($extended);
 $dwcaHandler->setIncludeDets($includeDets);
@@ -103,6 +108,7 @@ $dwcaHandler->setIncludeImgs($includeImgs);
 $dwcaHandler->setIncludeAttributes($includeAttributes);
 $dwcaHandler->setIncludeMaterialSample($includeMaterialSample);
 $dwcaHandler->setIncludeIdentifiers($includeIdentifiers);
+$dwcaHandler->setIncludeAssociations($includeAssociations);
 $dwcaHandler->setPublicationGuid($pubGuid);
 $dwcaHandler->setRequestPortalGuid($requestPortalGuid);
 
