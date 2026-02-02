@@ -22,8 +22,8 @@ $LANG['ACTIVE_THES_EMPTY'] = 'Le thésaurus actif est vide';
 $LANG['SCRIPT_INSTALL'] = 'Installation du Script';
 $LANG['RUN_SCRIPT'] = 'Exécuter le script';
 $LANG['INSTALL_VIA_SCRIPT'] = 'Le <a href="https://symbiota.org" target="_blank">Centre d\'assistance Symbiota</a> a fourni un script de données permettant de créer un thésaurus géographique de base.
-	Ce fichier de données contient les noms de lieux de tous les pays, les États/provinces du Canada, des États-Unis et du Mexique, ainsi que les comtés/paroisses des États-Unis et du Canada.
-	Une fois le thésaurus de base établi, il peut être enrichi à l\'aide des outils d\'importation de limites géographiques ci-dessous.';
+Ce fichier de données permettra de créer les pays, les États/provinces pour le Canada, les États-Unis et le Mexique, ainsi que les comtés/paroisses pour les États-Unis et le Canada.
+Une fois le thésaurus de base établi, il peut être enrichi à l\'aide des outils d\'importation de limites géographiques ci-dessous.';
 $LANG['GEOBOUNDARIES'] = "geoBoundaries options d'importation";
 $LANG['GEOBOUNDARIES_DESCRIPTION'] = 'Ces fonctions peuvent être utilisées pour importer des limites géographiques et des polygones via l\'API <a href="https://www.geoboundaries.org" target="_blank">geoBoundaries</a>.
 	Les ressources de geoBoundaries sont accessibles au public grâce au soutien et aux contributions de nombreuses

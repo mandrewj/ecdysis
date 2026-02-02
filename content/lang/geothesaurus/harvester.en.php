@@ -22,10 +22,10 @@ $LANG['ACTIVE_THES_EMPTY'] = 'Active thesaurus is empty';
 $LANG['SCRIPT_INSTALL'] = 'Script Install';
 $LANG['RUN_SCRIPT'] = 'Run Script';
 $LANG['INSTALL_VIA_SCRIPT'] = 'The <a href="https://symbiota.org" target="_blank">Symbiota Support Hub</a> has provided a data script that can be used to build a basic Geographic Thesaurus.
-	This data file contains place names for all countries, state/provinces for Canada, US, and Mexico, and counties/parishes for US and Canada.
+	This data file will create countries, state/provinces for Canada, US, and Mexico, and counties/parishes for the US and Canada.
 	Once a base thesaurus is established, it can be extended using the geoBoundary import tools below.';
 $LANG['GEOBOUNDARIES'] = 'geoBoundaries Import Options';
-$LANG['GEOBOUNDARIES_DESCRIPTION'] = 'These function can be used to import geographic boundaries and polygons via the <a href="https://www.geoboundaries.org" target="_blank">geoBoundaries</a> API.
+$LANG['GEOBOUNDARIES_DESCRIPTION'] = 'These functions can be used to import geographic boundaries and polygons via the <a href="https://www.geoboundaries.org" target="_blank">geoBoundaries</a> API.
 	These resources are publicly available through the support and contributions of numerous
 	<a href="https://www.geoboundaries.org/contribute.html" target="_blank">individuals, organizations, and funders</a>.';
 $LANG['ADD_ALL_BOUNDARIES'] = 'Add All International Boundaries';
