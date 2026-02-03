@@ -768,10 +768,9 @@ class DwcArchiverCore extends Manager{
 				foreach($unlinkFileArr as $deleteFile){
 					if (file_exists($deleteFile)) unlink($deleteFile);
 				}
-				$this->clearStagingTable();
 			}
 			else {
-				$this->errorMessage = 'FAILED to create archive file due to failure to return occurrence records; check and adjust search variables';
+				$this->errorMessage = 'FAILED to create archive file due to failure to return occurrence records';
 				$this->logOrEcho($this->errorMessage, 1);
 				if($this->targetPath && strpos($this->targetPath, 'content/dwca')){
 					//Archive is being published to Dwc-A publishing directory, thus remove from RSS feed since it's an empty archive
@@ -782,6 +781,7 @@ class DwcArchiverCore extends Manager{
 					}
 				}
 			}
+			$this->clearStagingTable();
 		}
 		else{
 			$this->logOrEcho('ERROR building DwC-Archive: '.$this->getErrorMessage(), 1);
