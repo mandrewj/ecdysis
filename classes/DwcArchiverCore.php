@@ -768,7 +768,7 @@ class DwcArchiverCore extends Manager{
 				foreach($unlinkFileArr as $deleteFile){
 					if (file_exists($deleteFile)) unlink($deleteFile);
 				}
-				//$this->clearStagingTable();
+				$this->clearStagingTable();
 			}
 			else {
 				$this->errorMessage = 'FAILED to create archive file due to failure to return occurrence records; check and adjust search variables';
@@ -861,7 +861,7 @@ class DwcArchiverCore extends Manager{
 	private function clearStagingTable(){
 		$status = false;
 		if($this->exportID){
-			$sql = 'DELETE FROM omexportoccurrences WHERE omExportID = ?';
+			$sql = 'DELETE FROM omexportoccurrences WHERE omExportID = ? OR initialTimestamp < DATE_SUB(NOW(), INTERVAL 3 HOUR)';
 			if($stmt = $this->conn->prepare($sql)){
 				$stmt->bind_param('i', $this->exportID);
 				if($stmt->execute()) $status = true;
