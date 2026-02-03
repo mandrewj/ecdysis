@@ -815,6 +815,10 @@ class DwcArchiverCore extends Manager{
 			$fileName .=  '_DwC-A.zip';
 
 			//Set URL path to DwC-Archive file
+			if(substr($this->dwcaOutputUrl, -1 != '/')){
+				//Remove previous file name that was added during a batch DwC-A build event
+				$this->dwcaOutputUrl = substr($this->dwcaOutputUrl, 0, strrpos($this->dwcaOutputUrl, '/') + 1);
+			}
 			if($this->dwcaOutputUrl) $this->dwcaOutputUrl .= $fileName;
 		}
 		return $fileName;
