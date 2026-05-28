@@ -7,6 +7,7 @@ Language: English
 
 include_once('sharedterms.en.php');
 
+$LANG['SEARCH'] = 'Search';
 $LANG['PAGE_TITLE'] = 'Collection Search Parameters';
 $LANG['TAXON_HEADER'] = 'Taxonomic Criteria';
 $LANG['INCLUDE_SYNONYMS'] = 'Include Synonyms';
@@ -54,6 +55,8 @@ $LANG['TITLE_TEXT_4'] = 'End date of range; leave blank if searching for single 
 $LANG['SPECIMEN_HEADER'] = 'Specimen Criteria';
 $LANG['CATALOG_NUMBER'] = 'Catalog Number';
 $LANG['INCLUDE_OTHER_CATNUM'] = 'Include other catalog numbers and GUIDs';
+$LANG['MATERIAL_SAMPLE_TYPE'] = 'Limit by Material Sample';
+$LANG['ALL_MATERIAL_SAMPLE'] = 'All Records with Material Samples';
 $LANG['TYPE'] = 'Limit to Type Specimens';
 $LANG['HAS_IMAGE'] = 'Limit to Specimens with Images';
 $LANG['HAS_GENETIC'] = 'Limit to Specimens with Genetic Data';
@@ -61,8 +64,16 @@ $LANG['HAS_COORDS'] = 'Limit to Specimens with Geocoordinates';
 $LANG['INCLUDE_CULTIVATED'] = 'Include cultivated/captive occurrences';
 $LANG['TRAIT_HEADER'] = 'Trait Criteria';
 $LANG['TRAIT_DESCRIPTION'] = 'Selecting multiple traits will return all records with <b>at least one</b> of those traits';
-$LANG['TYPE_TAXON'] = 'Type taxon';
+$LANG['TYPE_TAXON'] = 'Taxon name';
 $LANG['SELECT_TAXON_TYPE'] = 'Select taxon type';
 $LANG['DIRECTION'] = 'Direction';
 $LANG['DISTANCE_UNIT'] = 'Unit of distance';
+$LANG['MATERIAL_SAMPLE'] = 'Material Sample';
+$LANG['GEO_CONTEXT'] = 'Geological Context';
+$LANG['EARLY_INT'] = 'Early Interval';
+$LANG['LATE_INT'] = 'Late Interval';
+$LANG['LITHOGROUP'] = 'Group';
+$LANG['FORMATION'] = 'Formation';
+$LANG['MEMBER'] = 'Member';
+$LANG['BED'] = 'Bed';
 ?>

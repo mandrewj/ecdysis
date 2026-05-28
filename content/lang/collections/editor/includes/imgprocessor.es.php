@@ -1,7 +1,9 @@
 <?php
 /*
 ------------------
-Language: Español
+Language: Español (Spanish)
+Translated by: Samanta Orellana
+Date Translated: 2021-10-29
 ------------------
 */
 
@@ -27,5 +29,9 @@ $LANG['SAVE_OCR'] = 'Guardar OCR';
 $LANG['NEW'] = 'Nuevo';
 $LANG['SAVE_OCR_EDITS'] = 'Guardar Ediciones de OCR';
 $LANG['DELETE_OCR'] = 'Eliminar OCR';
+$LANG['VV_OCR_ENGINES'] = 'OCR Engines';
+$LANG['VV_OCR_ONLY'] = 'OCR Only';
+$LANG['VV_TRANSCRIPTION_MODEL'] = 'Transcription Model';
+$LANG['VV_TRANSCRIPTION_PROMPT'] = 'Transcription Prompt';
 
 ?>

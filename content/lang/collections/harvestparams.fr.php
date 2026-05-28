@@ -7,6 +7,7 @@ Language: Français (French)
 
 include_once('sharedterms.fr.php');
 
+$LANG['SEARCH'] = 'Rechercher';
 $LANG['PAGE_TITLE'] = 'Paramètres de Recherche de Collection';
 $LANG['TAXON_HEADER'] = 'Critères Taxonomiques';
 $LANG['INCLUDE_SYNONYMS'] = 'Inclure Synonymes';
@@ -54,6 +55,8 @@ $LANG['TITLE_TEXT_4'] = 'Date de fin de plage; laisser vide si vous recherchez u
 $LANG['SPECIMEN_HEADER'] = 'Critères de Échantillon';
 $LANG['CATALOG_NUMBER'] = 'Numéro de Catalogue';
 $LANG['INCLUDE_OTHER_CATNUM'] = "Inclure d'autres numéros de catalogue et GUIDes";
+$LANG['MATERIAL_SAMPLE_TYPE'] = 'Limiter aux Material Sample';
+$LANG['ALL_MATERIAL_SAMPLE'] = 'Tous les enregistrements contenant des échantillons de matériaux';
 $LANG['TYPE'] = 'Limiter aux Spécimens Types';
 $LANG['HAS_IMAGE'] = 'Limiter aux Spécimens avec des Images';
 $LANG['HAS_GENETIC'] = 'Limiter aux Spécimens avec des Données Génétiques';
@@ -61,8 +64,16 @@ $LANG['HAS_COORDS'] = 'Limiter aux Spécimens avec Géocoordonnées';
 $LANG['INCLUDE_CULTIVATED'] = 'Inclure Occurrences Cultivées/Captives';
 $LANG['TRAIT_HEADER'] = 'Critères de Trait';
 $LANG['TRAIT_DESCRIPTION'] = 'La sélection de plusieurs traits renverra tous les enregistrements avec <b>au moins un</b> de ces traits';
-$LANG['TYPE_TAXON'] = 'Tapez le taxon';
+$LANG['TYPE_TAXON'] = 'Nom du Taxon';
 $LANG['SELECT_TAXON_TYPE'] = 'Sélectionnez le type de taxon';
 $LANG['DIRECTION'] = 'Direction';
 $LANG['DISTANCE_UNIT'] = 'Unité de distance';
+$LANG['MATERIAL_SAMPLE'] = 'Échantillon de Matériel';
+$LANG['GEO_CONTEXT'] = 'Contexte géologique';
+$LANG['EARLY_INT'] = 'Intervalle précoce';
+$LANG['LATE_INT'] = 'Intervalle tardif';
+$LANG['LITHOGROUP'] = 'Groupe';
+$LANG['FORMATION'] = 'Formation';
+$LANG['MEMBER'] = 'Membre';
+$LANG['BED'] = 'Lit';
 ?>

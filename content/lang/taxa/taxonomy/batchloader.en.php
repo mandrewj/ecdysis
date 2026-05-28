@@ -4,6 +4,7 @@
 Language: English
 ------------------
 */
+
 $LANG['TAXA_LOADER'] = 'Taxa Loader';
 $LANG['ENTER_PATH'] = 'Please enter a path value of the file you wish to upload';
 $LANG['UPLOAD_ZIP'] = 'Upload file must be a CSV or ZIP file';
@@ -22,6 +23,10 @@ $LANG['TAX_NAME_BATCH_LOADER'] = 'Taxonomic Name Batch Loader';
 $LANG['TAX_UPLOAD_EXPLAIN1'] = 'This page allows a Taxonomic Administrator to batch upload taxonomic data files. See';
 $LANG['SYMB_DOC'] = 'Symbiota Documentation';
 $LANG['TAX_UPLOAD_EXPLAIN2'] = 'pages for more details on the Taxonomic Thesaurus layout.';
+$LANG['UNABLE_TO_COPY_INPUT_FILE'] = 'Unable to transfer input file';
+$LANG['UABLE_TO_IMPORT_INPUT_FILE'] = 'Unable to import input file';
+$LANG['UABLE_TO_EXTRACT_INPUT_FILE'] = 'Unable to extract input file';
+$LANG['INVALID_INPUT_FILE'] = 'Invalid input file';
 $LANG['TAX_UPLOAD'] = 'Taxa Upload';
 $LANG['SOURCE_FIELD'] = 'Source Field';
 $LANG['TARGET_FIELD'] = 'Target Field';
@@ -70,7 +75,7 @@ $LANG['TARGET_STATUS'] = 'Target status';
 $LANG['WEB_SERVICE_URL'] = 'Web Service URL';
 $LANG['API_URL'] = 'API URL';
 $LANG['COL_URL'] = 'CoL URL';
-$LANG['TARGET_THIS_NODE'] = 'Target this node to harvest children';
+$LANG['IMPORT_THIS_NODE'] = 'Import this node and child taxa';
 $LANG['NO_VALID_COL'] = 'ERROR: no valid CoL targets returned';
 $LANG['TAXA_LOADED_SUCCESS'] = 'taxa within the target node have been loaded successfully';
 $LANG['TAX_UPLOAD_INSTRUCTIONS'] = 'Flat structured, CSV (comma delimited) text files can be uploaded here.

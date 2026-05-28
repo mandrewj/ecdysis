@@ -1,0 +1,113 @@
+<?php
+/*
+------------------
+Language: Português (Portuguese)
+Translated by: Google Translate (2024-09-16)
+------------------
+*/
+
+$LANG['SITEMAP'] = 'Mapa do Site';
+$LANG['HOME'] = 'Início';
+$LANG['COLLECTIONS'] = 'Coleções';
+$LANG['SEARCHENGINE'] = 'Mecanismo de Busca';
+$LANG['SEARCH_COLL'] = 'pesquisar coleções';
+$LANG['LISTOFCOLL'] = 'lista de coleções participantes do projeto';
+$LANG['COLLSTATS'] = 'Estatísticas da Coleção';
+$LANG['EXSICC'] = 'Índice Exsiccatae';
+$LANG['DATA_PUBLISHING'] = 'Publicação de Dados';
+$LANG['COLLECTIONS_RSS'] = 'Feed RSS para Coleções de História Natural e Projetos de Observação';
+$LANG['DARWINCORE'] = 'Arquivos Principais do Darwin (DwC-A)';
+$LANG['RSS'] = 'Feed RSS DwC-A';
+$LANG['PUBDATA'] = 'conjuntos de dados publicados de coleções selecionadas';
+$LANG['IMGLIB'] = 'Biblioteca Multimídia';
+$LANG['IMAGE_SEARCH'] = 'Ferramenta de Pesquisa Interativa';
+$LANG['CONTRIB'] = 'Colaboradores Multimídia';
+$LANG['USAGEPOLICY'] = 'Política de Iso e Informações de Direitos Autorais';
+$LANG['ADDITIONAL_RESOURCES'] = 'Recursos Adicionais';
+$LANG['GLOSSARY'] = 'Glossário';
+$LANG['PROTECTED_SPECIES'] = 'Espécies Protegidas';
+$LANG['LISTOFTAXA'] = 'lista de táxons onde a localidade e/ou informações taxonômicas são protegidas devido ao status de raro/ameaçado/em perigo';
+$LANG['BIOTIC_INVENTORIES'] = 'Projetos de Inventário Biótico';
+$LANG['ALL_CHECKLISTS'] = 'Todas as Inventários Taxonômicos Públicas';
+$LANG['DYNAMIC'] = 'Listas Dinâmicas de Espécies';
+$LANG['CHECKLIST'] = 'Inventário Taxonômico';
+$LANG['BUILDCHECK'] = 'construir dinamicamente um inventário taxonômico usando registros de amostras georreferenciados';
+$LANG['DYNAMICKEY'] = 'Chave Dinâmica';
+$LANG['BUILDDKEY'] = 'construir dinamicamente uma chave usando registros de espécimes georreferenciados';
+$LANG['MANAGTOOL'] = 'Ferramentas de Gerenciamento de Dados';
+$LANG['ADMIN'] = 'Funções Administrativas (Somente Superadministradores)';
+$LANG['USERPERM'] = 'Permissões do Usuário';
+$LANG['TAXONOMIC_CLEANER'] = 'Limpador de Nomes Taxonômicos Globais';
+$LANG['CREATENEWCOLL'] = 'Criar uma nova Coleção ou Perfil de Observação';
+$LANG['GEOTHESAURUS'] = 'Tesauro Geográfico';
+$LANG['COORDVALIDATOR'] = 'Verificar as Coordenadas em Relação às Fronteiras Políticas';
+$LANG['GUIDMAP'] = 'Mapeador de GUID';
+$LANG['THUMBNAIL_BUILDER'] = 'Ferramenta de Criação de Miniaturas';
+$LANG['SALIX'] = 'Gerenciador SALIX WordStat';
+$LANG['IDKEYS'] = 'Chaves de Identificação';
+$LANG['KEYMODULE'] = 'Nota: O módulo Chave de Identificação está desativado neste portal. No entanto, você pode substituir ativando chaves individuais na página de administração da lista de verificação.';
+$LANG['AUTHOKEY'] = 'Você está autorizado a acessar o';
+$LANG['CHARASTATES'] = 'Editor de Caracteres e Estados de Caracteres';
+$LANG['AUTHIDKEY'] = 'Você está autorizado a editar chaves de identificação';
+$LANG['CODINGCHARA'] = 'Para codificar caracteres em formato de tabela, abra o Editor de Matrizes para qualquer uma das seguintes listas de verificação';
+$LANG['NOTAUTHIDKEY'] = 'Você não está autorizado a editar Chaves de Identificação';
+$LANG['IMAGES'] = 'Multimídia';
+$LANG['SEESYMBDOC'] = 'Veja a documentação do Symbiota em';
+$LANG['IMGSUB'] = 'Envio Multimídia';
+$LANG['FORANOVERVIEW'] = 'para uma visão geral de como a multimídia é gerenciada em um portal de dados Symbiota. Multimídia de campo sem informações detalhadas de localidade pode ser carregada usando a página Taxon Species Profile.                                                A multimídia das amostras é carregada através da página Edição de amostras ou através de um processo de upload em lote estabelecido por um gerente do portal. Observações Multimídia (Vouchers Multimídia) com informações detalhadas da localidade podem ser carregadas no link abaixo. Observe que você precisará das atribuições de permissão necessárias para usar esse recurso. ';
+$LANG['BASICFIELD'] = 'Envio Básico de Multimídia de Campo';
+$LANG['IMGOBSER'] = 'Módulo de envio de observação multimídia';
+$LANG['ADDNEWPROJ'] = 'Adicionar um Vovo Projeto';
+$LANG['LISTOFCURR'] = 'Lista de Projetos Atuais';
+$LANG['CLICKEDIT'] = '(clique para editar)';
+$LANG['NOPROJ'] = 'Não há projetos no sistema';
+$LANG['NOTEDITPROJ'] = 'Você não está autorizado a editar nenhum dos Projetos';
+$LANG['TAXONPROF'] = 'Página de Perfil do Táxon';
+$LANG['THEFOLLOWINGSPEC'] = 'Os seguintes recursos de edição da página de perfil de espécie também estão disponíveis para os editores através de um            link de edição localizado no canto superior direito de cada página de perfil de espécie.';
+$LANG['NOTAUTHOTAXONPAGE'] = 'Você ainda não está autorizado a editar o Perfil do Táxon';
+$LANG['TAXONOMY'] = 'Taxonomia';
+$LANG['TAXTREE'] = 'Visualizador da Árvore Taxonômica';
+$LANG['DYNTAXTREE'] = 'Explorador de Taxonomia';
+$LANG['EDITTAXPL'] = 'Editar Posicionamento Taxonômico (usar';
+$LANG['TAXTREEVIEW'] = 'Visualizador da Árvore Taxonômica)';
+$LANG['ADDTAXANAME'] = 'Adicionar novo nome taxonômico';
+$LANG['BATCHTAXA'] = 'Upload em Lote de um Arquivo de Dados Taxonômicos';
+$LANG['EOLLINK'] = 'Gerenciamento de Ligações de Enciclopédia do Life';
+$LANG['NOTEDITTAXA'] = 'Você não está autorizado a editar a taxonomia';
+$LANG['CHECKLISTS'] = 'Inventários Taxonômicos';
+$LANG['TOOLSFORMANAGE'] = 'Ferramentas para gerenciar listas de verificação estão disponíveis em cada página de exibição de listas de verificação. Os símbolos de edição localizados
+	no canto superior direito da página exibirão opções de edição para essa lista de verificação. Abaixo está uma lista das listas de verificação que você está autorizado a editar';
+$LANG['EXSICCATII'] = 'Exsicados';
+$LANG['ESCMOD'] = 'O módulo Exsiccati está ativado para este portal. O índice exsiccati (listado abaixo) pode ser navegado ou pesquisado por qualquer pessoa. No entanto, para adicionar
+	ou modificar títulos ou séries exsicatas, o usuário deve ser administrador de pelo menos uma coleção';
+$LANG['NOTEDITCHECK'] = 'Você não está autorizado a editar nenhuma das inventários taxonômicos';
+$LANG['COLLECTION_DESCRIPTION'] = 'As coleções estão organizadas por tipo (por exemplo: espécimes preservados, espécimes fósseis, observações e observações de campo de investigação).
+	As observações de campo de investigação representam um tipo de coleção especializado que permite aos investigadores de campo gerir os seus dados e gerar etiquetas para
+	espécimes ou observações, tudo isto intimamente ligado à sua conta de utilizador. Para mais informações, visite o';
+$LANG['SYMBDOCU'] = 'Documentação do Symbiota';
+$LANG['PRESERVED_SPECIMENS'] = 'Espécimes Preservados';
+$LANG['FOSSIL_SPECIMENS'] = 'Espécimes Fósseis';
+$LANG['OBSERVATIONS'] = 'Observações';
+$LANG['GENERAL_OBSERVATIONS'] = 'Observações de Campo da Pesquisa';
+$LANG['NOEDITCOLL'] = 'Você não tem permissões explícitas de edição para uma coleção específica';
+$LANG['PLEASE'] = 'Por favor';
+$LANG['LOGIN'] = 'login';
+$LANG['TOACCESS'] = 'para acessar ferramentas de edição.';
+$LANG['CONTACTPORTAL'] = 'Entre em contato com um administrador do portal para obter permissões de edição';
+$LANG['ABOUT'] = 'Sobre Simbiota';
+$LANG['CODE'] = 'Versão do Código';
+$LANG['SCHEMA'] = 'Versão do Esquema ';
+$LANG['AUTHO'] = 'Você está autorizado a acessar o';
+$LANG['VERNAC_COM'] = 'Editar Nomes Vernáculos/Comuns';
+$LANG['TEXTDESC'] = 'Editar Descrições de Texto';
+$LANG['EDITIMG'] = 'Editar multimídia';
+$LANG['IMGSORTORD'] = 'Editar ordem de classificação multimídia';
+$LANG['ADDNEWIMG'] = 'Adicionar um novo multimídia';
+$LANG['DATASETS'] = 'Conjuntos de dados';
+$LANG['ALLPUBDAT'] = 'Todos os Conjuntos de Dados Visíveis Publicamente';
+$LANG['DATMANPAG'] = 'Página de Gerenciamento de Conjunto de Dados';
+$LANG['DATA_AUTHORIZED_TO_EDIT'] = 'conjuntos de dados yo você está autorizado a editar';
+$LANG['MANAGE_TAXON_THUMBNAILS'] = 'Gerenciar Miniaturas do Mapa de Perfis de Táxons';
+$LANG['TAXINTER'] = 'Permissões de Usuário de Interesse Taxonômico';
+$LANG['OTHER_CAT_TRANSFER'] = 'Outra Ferramenta de Transferência de Número de Catálogo';
+?>
