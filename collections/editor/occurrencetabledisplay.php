@@ -1,23 +1,21 @@
 <?php
 include_once('../../config/symbini.php');
 include_once($SERVER_ROOT.'/classes/OccurrenceEditorManager.php');
-include_once($SERVER_ROOT.'/content/lang/collections/editor/occurrencetabledisplay.'.$LANG_TAG.'.php');
+include_once($SERVER_ROOT . '/classes/utilities/Language.php');
+
+Language::load([
+	'collections/editor/occurrencetabledisplay',
+	'collections/list'
+]);
+
 header('Content-Type: text/html; charset='.$CHARSET);
 
-$collId = array_key_exists('collid',$_REQUEST)?$_REQUEST['collid']:false;
-$recLimit = array_key_exists('reclimit',$_REQUEST)?$_REQUEST['reclimit']:1000;
-$occIndex = array_key_exists('occindex',$_REQUEST)?$_REQUEST['occindex']:0;
-$crowdSourceMode = array_key_exists('csmode',$_REQUEST)?$_REQUEST['csmode']:0;
-$dynamicTable = array_key_exists('dynamictable',$_REQUEST)?$_REQUEST['dynamictable']:0;
-$action = array_key_exists('submitaction',$_REQUEST)?$_REQUEST['submitaction']:'';
-
-//Sanitation
-if(!is_numeric($collId)) $collId = false;
-if(!is_numeric($recLimit)) $recLimit = 1000;
-if(!is_numeric($occIndex)) $occIndex = false;
-if(!is_numeric($crowdSourceMode)) $crowdSourceMode = 0;
-if(!is_numeric($dynamicTable)) $dynamicTable = 0;
-$action = htmlspecialchars($action, HTML_SPECIAL_CHARS_FLAGS);
+$collId = array_key_exists('collid',$_REQUEST) ? filter_var($_REQUEST['collid'], FILTER_SANITIZE_NUMBER_INT) : false;
+$recLimit = array_key_exists('reclimit', $_REQUEST) ? filter_var($_REQUEST['reclimit'], FILTER_SANITIZE_NUMBER_INT) : 1000;
+$occIndex = array_key_exists('occindex', $_REQUEST) ? filter_var($_REQUEST['occindex'], FILTER_SANITIZE_NUMBER_INT) : 0;
+$crowdSourceMode = array_key_exists('csmode', $_REQUEST) ? filter_var($_REQUEST['csmode'], FILTER_SANITIZE_NUMBER_INT) : 0;
+$dynamicTable = array_key_exists('dynamictable', $_REQUEST) ? filter_var($_REQUEST['dynamictable'], FILTER_SANITIZE_NUMBER_INT) : 0;
+$action = array_key_exists('submitaction', $_REQUEST) ? $_REQUEST['submitaction'] : '';
 
 $occManager = new OccurrenceEditorManager();
 
@@ -28,27 +26,33 @@ $displayQuery = 0;
 $isGenObs = 0;
 $collMap = array();
 $recArr = array();
-$headerMapBase = array('institutioncode'=>'Institution Code (override)','collectioncode'=>'Collection Code (override)',
-	'ownerinstitutioncode'=>'Owner Code (override)','catalognumber' => 'Catalog Number',
-	'othercatalognumbers' => 'Other Catalog #','family' => 'Family','identificationqualifier' => 'ID Qualifier',
-	'sciname' => 'Scientific Name','scientificnameauthorship'=>'Author','recordedby' => 'Collector','recordnumber' => 'Number',
-	'associatedcollectors' => 'Associated Collectors','eventdate' => 'Event Date','verbatimeventdate' => 'Verbatim Date',
-	'identificationremarks' => 'Identification Remarks','taxonremarks' => 'Taxon Remarks','identifiedby' => 'Identified By',
-	'dateidentified' => 'Date Identified', 'identificationreferences' => 'Identification References',
-	'country' => 'Country','stateprovince' => 'State/Province','county' => 'County','municipality' => 'Municipality',
-	'locality' => 'Locality','decimallatitude' => 'Latitude', 'decimallongitude' => 'Longitude',
-	'coordinateuncertaintyinmeters' => 'Uncertainty In Meters', 'verbatimcoordinates' => 'Verbatim Coordinates','geodeticdatum' => 'Datum',
-	'georeferencedby' => 'Georeferenced By','georeferenceprotocol' => 'Georeference Protocol','georeferencesources' => 'Georeference Sources',
-	'georeferenceverificationstatus' => 'Georef Verification Status','georeferenceremarks' => 'Georef Remarks',
-	'minimumelevationinmeters' => 'Elev. Min. (m)','maximumelevationinmeters' => 'Elev. Max. (m)','verbatimelevation' => 'Verbatim Elev.',
-	'minimumdepthinmeters' => 'Depth. Min. (m)','maximumdepthinmeters' => 'Depth. Max. (m)','verbatimdepth' => 'Verbatim Depth',
-	'habitat' => 'Habitat','substrate' => 'Substrate','occurrenceremarks' => 'Notes (Occurrence Remarks)','associatedtaxa' => 'Associated Taxa',
-	'verbatimattributes' => 'Description','lifestage' => 'Life Stage', 'sex' => 'Sex', 'individualcount' => 'Individual Count',
-	'samplingprotocol' => 'Sampling Protocol', 'preparations' => 'Preparations', 'reproductivecondition' => 'Reproductive Condition',
-	'typestatus' => 'Type Status','cultivationstatus' => 'Cultivation Status','establishmentmeans' => 'Establishment Means','datageneralizations' => 'Data Generalizations',
-	'disposition' => 'Disposition','duplicatequantity' => 'Duplicate Qty','datelastmodified' => 'Date Last Modified', 'labelproject' => 'Project',
-	'processingstatus' => 'Processing Status','recordenteredby' => 'Entered By','dbpk' => 'dbpk','basisofrecord' => 'Basis Of Record',
-	'language' => 'Language');
+$headerMapBase = array( 'institutioncode' => $LANG['INSTITUTION_CODE'], 'collectioncode' => $LANG['COLLEC_CODE'],
+	'ownerinstitutioncode' => $LANG['OWNER_CODE'], 'catalognumber' => $LANG['CATALOG_NUM'], 'othercatalognumbers' => $LANG['OTHER_CAT_NUMS'],
+	'family' => $LANG['FAMILY'], 'identificationqualifier' => $LANG['ID_QUALIFIER'],
+	'sciname' => $LANG['SCI_NAME'], 'scientificnameauthorship' => $LANG['SCI_NAME_AUTHOR'], 'recordedby' => $LANG['RECORD_COLLEC'], 'recordnumber' => $LANG['RECORD_NUM'],
+	'associatedcollectors' => $LANG['ASSOC_COLLEC'], 'eventdate' => $LANG['EVENT_DATE'], 'verbatimeventdate' => $LANG['VERB_EVENT_DATE'],
+	'identificationremarks' => $LANG['ID_REMARKS'], 'taxonremarks' => $LANG['TAXON_REMARKS'], 'identifiedby' => $LANG['ID_BY'],
+	'dateidentified' => $LANG['DATE_IDENTIFIED'], 'identificationreferences' => $LANG['ID_REF'],
+	'country' => $LANG['COUNTRY'], 'stateprovince' => $LANG['STATE_PROVINCE'], 'county' => $LANG['COUNTY'], 'municipality' => $LANG['MUNICIPALITY'],
+ 	'locality' => $LANG['LOCALITY'], 'decimallatitude' => $LANG['LATITUDE'], 'decimallongitude' => $LANG['LONGITUDE'],
+	'identifierName' => $LANG['ID_TAG_NAME'], 'identifierValue' => $LANG['ID_TAG_VAL'],
+	'coordinateuncertaintyinmeters' => $LANG['UNCERTAINTY_METERS'], 'verbatimcoordinates' => $LANG['VERB_COORDINATES'], 'geodeticdatum' => $LANG['DATUM'],
+	'georeferencedby' => $LANG['GEOREF_BY'], 'georeferenceprotocol' => $LANG['GEOREF_PROTOCOL'], 'georeferencesources' => $LANG['GEOREF_SOURCE'],
+	'georeferenceverificationstatus' => $LANG['GEOREF_VERIF_STATUS'], 'georeferenceremarks' => $LANG['GEOREF_REMARKS'],
+	'minimumelevationinmeters' => $LANG['ELEV_MIN_METERS'], 'maximumelevationinmeters' => $LANG['ELEV_MAX_METERS'], 'verbatimelevation' => $LANG['VERB_ELEV'],
+	'minimumdepthinmeters' => $LANG['DEPTH_MIN_METERS'], 'maximumdepthinmeters' => $LANG['DEPTH_MAX_METERS'], 'verbatimdepth' => $LANG['VERB_DEPTH'],
+	'habitat' => $LANG['HABITAT'], 'substrate' => $LANG['SUBSTRATE'], 'storageLocation' => $LANG['STORAGE_LOC'],
+	'occurrenceremarks' => $LANG['OCCURR_REMARKS'], 'associatedtaxa' => $LANG['ASSOC_TAXA'],
+	'verbatimattributes' => $LANG['VERB_ATTRIBUTES'], 'lifestage' => $LANG['LIFE_STAGE'], 'sex' => $LANG['SEX'], 'individualcount' => $LANG['COUNT'],
+	'samplingprotocol' => $LANG['SAMPLE_PROTOCOL'], 'preparations' => $LANG['PREPARATIONS'], 'reproductivecondition' => $LANG['REPRODUCTIVE_CONDITION'],
+	'typestatus' => $LANG['TYPE_STATUS'], 'cultivationstatus' => $LANG['CULTIVATION_STATUS'], 'establishmentmeans' => $LANG['ESTABLISHMENT_MEANS'], 'datageneralizations' => $LANG['DATA_GENERALIZATIONS'],
+	'disposition' => $LANG['DISPOSITION'], 'duplicatequantity' => $LANG['DUPE_QUANTITY'], 'datelastmodified' => $LANG['DATE_LAST_MODIFIED'], 'labelproject' => $LANG['LABEL_PROJECT'],
+	'processingstatus' => $LANG['PROCESS_STATUS'], 'recordenteredby' => $LANG['RECORD_ENTERED_BY'], 'dbpk' => $LANG['DBPK'], 'basisofrecord' => $LANG['BASIS_REC'],
+	'language' => $LANG['LANG'], 'continent' => $LANG['CONTINENT'], 'islandgroup' => $LANG['ISLAND_GROUP'], 'island' => $LANG['ISLAND'], 'waterbody' => $LANG['WATER_BODY']);
+//paleo fields
+$headerMapPaleoBase = array('earlyInterval' => $LANG['INTERVAL_EARLY'], 'lateInterval' => $LANG['INTERVAL_LATE'],
+	'lithogroup' => $LANG['GROUP'],'formation' => $LANG['FORMATION'], 'member' => $LANG['MEMBER'], 'bed' => $LANG['BED']);
+
 $headMap = array();
 
 $qryCnt = 0;
@@ -62,6 +66,8 @@ if($SYMB_UID){
 	}
 
 	if($collMap && $collMap['colltype']=='General Observations') $isGenObs = 1;
+	if ($collMap && $collMap['colltype'] == 'Fossil Specimens')
+		$headerMapBase = array_merge($headerMapBase, $headerMapPaleoBase);
 	if(!$isEditor){
 		if($isGenObs){
 			if($collId && array_key_exists('CollEditor',$USER_RIGHTS) && in_array($collId,$USER_RIGHTS['CollEditor'])){
@@ -99,8 +105,7 @@ if($SYMB_UID){
 	if(!is_numeric($occIndex)) $occIndex = 0;
 	$recStart = floor($occIndex/$recLimit)*$recLimit;
 	$recArr = $occManager->getOccurMap($recStart, $recLimit);
-	$navStr = '<div class="navpath" style="float:right;">';
-
+	$navStr = '<div class="navpath">';
 
 	if($recStart >= $recLimit){
 		$navStr .= '<a href="#" onclick="return submitQueryForm(0);" title="'.(isset($LANG['FIRST'])?$LANG['FIRST']:'First').' '.$recLimit.' '.(isset($LANG['RECORDS'])?$LANG['RECORDS']:'records').'">|&lt;</a>&nbsp;&nbsp;&nbsp;&nbsp;';
@@ -114,23 +119,27 @@ if($SYMB_UID){
 
 		$navStr .= '<a href="#" onclick="return submitQueryForm('.(floor($qryCnt/$recLimit) * $recLimit).');" title="'.(isset($LANG['LAST'])?$LANG['LAST']:'Last').' '.$recLimit.' '.(isset($LANG['RECORDS'])?$LANG['RECORDS']:'records').'">&gt;|</a>';
 	}
+	$navStr .= ' * ' . (isset($LANG['CLICK_ID'])?$LANG['CLICK_ID']:'Click on the Symbiota identifier in the first column to open the editor.');
 	$navStr .= '</div>';
 }
 else{
 	header('Location: ../../profile/index.php?refurl=../collections/editor/occurrencetabledisplay.php?'.htmlspecialchars($_SERVER['QUERY_STRING'], ENT_QUOTES));
 }
 ?>
-<html>
+<!DOCTYPE html>
+<html lang="<?php echo $LANG_TAG ?>">
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=<?php echo $CHARSET; ?>">
 	<title><?php echo $DEFAULT_TITLE.' '.(isset($LANG['TABLE_VIEW'])?$LANG['TABLE_VIEW']:'Occurrence Table View'); ?></title>
 	<link href="<?php echo $CSS_BASE_PATH; ?>/jquery-ui.css" type="text/css" rel="stylesheet">
 	<?php
 	include_once($SERVER_ROOT.'/includes/head.php');
+	include_once($SERVER_ROOT.'/includes/javascript_lang_tags.php');
 	?>
-	<link href="<?php echo $CLIENT_ROOT; ?>/js/datatables/datatables.min.css" type="text/css" rel="stylesheet">
-	<script src="../../js/jquery.js" type="text/javascript"></script>
-	<script src="../../js/jquery-ui.js" type="text/javascript"></script>
+	<link href="<?php echo htmlspecialchars($CLIENT_ROOT, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE); ?>/js/datatables/datatables.min.css" type="text/css" rel="stylesheet">
+	<script src="<?php echo $CLIENT_ROOT; ?>/js/jquery-3.7.1.min.js" type="text/javascript"></script>
+	<script src="<?php echo $CLIENT_ROOT; ?>/js/jquery-ui.min.js" type="text/javascript"></script>
+	<script src="<?php echo $CLIENT_ROOT; ?>/js/symb/collections.list.js" type="text/javascript"></script>
 	<script src="../../js/datatables/datatables.min.js?ver=1" type="text/javascript"></script>
 	<script type="text/javascript">
 		$(document).ready(
@@ -145,41 +154,114 @@ else{
 			}
 		);
 	</script>
-	<script src="../../js/symb/collections.editor.table.js?ver=2" type="text/javascript" ></script>
-	<script src="../../js/symb/collections.editor.query.js?ver=6" type="text/javascript" ></script>
-	<style type="text/css">
-		#titleDiv { font-weight: bold; font-size: 14px; width:790px; margin-bottom: 5px; }
+	<script defer src="../../js/symb/collections.editor.table.js?ver=7" type="text/javascript" ></script>
+	<script defer src="../../js/symb/collections.editor.query.js?ver=7" type="text/javascript" ></script>
+	<style>
+		#titleDiv{margin-bottom: 1rem}
 		table.styledtable td { white-space: nowrap; }
 		fieldset{ padding:15px }
 		fieldset > legend{ font-weight:bold }
-		.fieldGroupDiv{ clear:both; margin-bottom:2px; overflow: auto}
-		.fieldDiv{ float:left; margin-right: 20px}
+		.fieldGroupDiv {
+			display: flex;
+			align-items: center;
+			gap: 0.75rem;
+			margin-bottom: 1rem;
+			input {
+				margin: 0
+			}
+			a {
+				display: flex;
+			}
+		}
+		.fieldDiv{
+			display: inline;
+		}
 		#innertext{ background-color: white; margin: 0px 10px; }
+
+		#record-viewer-innertext {
+			margin-left: 2em;
+			width: calc(100vw - 4em);
+			background-color: white;
+		}
 		.editimg{ width: 15px; }
+		.table-scroll {
+			display: block;
+			white-space: nowrap;
+			overflow-x: scroll;
+			overflow-y: scroll;
+			max-height: 80vh;
+			padding-bottom: 1.2rem;
+		}
+
+		.button-toggle {
+			background-color: transparent;
+			color: var(--body-text-color);
+			border: 2px solid var(--darkest-color);
+
+			&.active {
+				background-color: var(--darkest-color);
+				color: white;
+			}
+
+			&:hover {
+				background-color: var(--medium-color);
+				border: 2px solid var(--medium-color);
+				color: var(--light-color);
+			}
+		}
 	</style>
 </head>
 <body style="margin-left: 0px; margin-right: 0px;background-color:white;">
-	<div id="innertext">
+	<a class="screen-reader-only" href="#skip-search"><?php echo $LANG['SKIP_SEARCH'] ?></a>
+	<div id="record-viewer-innertext">
+		<h1 class="page-heading screen-reader-only"><?php echo $LANG['TABLE_DISPLAY']; ?></h1>
 		<?php
 		if(($isEditor || $crowdSourceMode)){
 			?>
-			<div id="titleDiv">
-				<div style="float:right;margin:">
-					<a href="#" title="<?php echo $LANG['SEARCH_FILTER']; ?>" onclick="toggleQueryForm();"><img src="../../images/find.png" style="width:16px;" /></a>
+
+			<div style="width:850px;clear:both;">
+				<div class='navpath'>
+					<a href="../../index.php"><?php echo htmlspecialchars((isset($LANG['HOME'])?$LANG['HOME']:'Home'), ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE); ?></a> &gt;&gt;
 					<?php
-					if($isEditor == 1 || $isGenObs){
+					if($crowdSourceMode){
 						?>
-						<a href="#" title="Batch Update Tool" onclick="toggleBatchUpdate();return false;"><img class="editimg" src="../../images/editplus.png" /></a>
+						<a href="../specprocessor/crowdsource/index.php"><?php echo htmlspecialchars((isset($LANG['CENTRAL_CROWD'])?$LANG['CENTRAL_CROWD']:'Crowd Source Central'), ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE); ?></a> &gt;&gt;
 						<?php
 					}
+					else{
+						if(!$isGenObs || $IS_ADMIN){
+							?>
+							<a href="../misc/collprofiles.php?collid=<?php echo htmlspecialchars($collId, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE); ?>&emode=1"><?php echo htmlspecialchars((isset($LANG['COL_MANAGEMENT'])?$LANG['COL_MANAGEMENT']:'Collection Management'), ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE); ?></a> &gt;&gt;
+							<?php
+						}
+						if($isGenObs){
+							?>
+							<a href="../../profile/viewprofile.php?tabindex=1"><?php echo htmlspecialchars((isset($LANG['PERS_MANAGEMENT'])?$LANG['PERS_MANAGEMENT']:'Personal Management'), ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE); ?></a> &gt;&gt;
+							<?php
+						}
+					}
 					?>
+					<b><?php echo (isset($LANG['TABLE_VIEW'])?$LANG['TABLE_VIEW']:'Occurrence Table View'); ?></b>
 				</div>
+			</div>
+			<div id="titleDiv">
 				<?php
-				if($collMap) echo $collMap['collectionname'].' ('.$collMap['institutioncode'].($collMap['collectioncode']?':'.$collMap['collectioncode']:'').')';
+				if($collMap) echo '<h1>' . $collMap['collectionname'].' ('.$collMap['institutioncode'].($collMap['collectioncode']?':'.$collMap['collectioncode']:'').')</h1>';
 				?>
+				<div style="display: flex; flex-wrap: wrap; gap: 0.5rem">
+				   <button id="query-btn" type="button" class="button-toggle active" onclick="toggleSearch(); toggleButtonVisuals(this, 'querydiv', ['batch-update-btn'])">
+					  <?= $LANG['SEARCH_FILTER'] ?>
+				   </button>
+				   <?php if($isEditor == 1 || $isGenObs): ?>
+				   <button id="batch-update-btn" type="button" class="button-toggle" onclick="toggleBatchUpdate(); toggleButtonVisuals(this, 'batchupdatediv', ['query-btn'])">
+					  <?= $LANG['BATCH_TOOL'] ?>
+				   </button>
+				   <?php endif ?>
+				</div>
 			</div>
 			<?php
 			if(!$recArr) $displayQuery = 1;
+
 			include 'includes/queryform.php';
 			//Setup header map
 			if($recArr){
@@ -187,7 +269,7 @@ else{
 				foreach($recArr as $id => $occArr){
 					foreach($occArr as $k => $v){
 						if(!is_array($v)){
-							if(trim($v) && !array_key_exists($k,$headerArr)){
+							if((trim($v ?? '') || $v === 0) && !array_key_exists($k,$headerArr)){
 								$headerArr[$k] = $k;
 							}
 						}
@@ -205,6 +287,8 @@ else{
 			}
 			if($isEditor == 1 || $isGenObs){
 				$buFieldName = (array_key_exists('bufieldname',$_REQUEST)?$_REQUEST['bufieldname']:'');
+				$batchUpdateHeaderMapBase = $headerMapBase;
+				unset($batchUpdateHeaderMapBase['othercatalognumbers']);
 				?>
 				<div id="batchupdatediv" style="width:600px;clear:both;display:<?php echo ($buFieldName?'block':'none'); ?>;">
 					<form name="batchupdateform" action="occurrencetabledisplay.php" method="post" onsubmit="return false;">
@@ -217,8 +301,8 @@ else{
 										<option value=""><?php echo (isset($LANG['SELECT_FIELD'])?$LANG['SELECT_FIELD']:'Select Field Name'); ?></option>
 										<option value="">----------------------</option>
 										<?php
-										asort($headerMapBase);
-										foreach($headerMapBase as $k => $v){
+										asort($batchUpdateHeaderMapBase);
+										foreach($batchUpdateHeaderMapBase as $k => $v){
 											//Scientific name fields are excluded because batch updates will not update tidinterpreted index and authors
 											//Scientific name updates should happen within
 											if($k != 'scientificnameauthorship' && $k != 'sciname'){
@@ -273,7 +357,7 @@ else{
 									<input name="collid" type="hidden" value="<?php echo $collId; ?>" />
 									<input name="occid" type="hidden" value="0" />
 									<input name="occindex" type="hidden" value="0" />
-									<button name="submitaction" type="submit" value="Batch Update Field" onclick="submitBatchUpdate(this.form); return false;"><?php echo (isset($LANG['BATCH_UP_FIELD'])?$LANG['BATCH_UP_FIELD']:'Batch Update Field'); ?></button>
+									<button id="batchUpdateButton" name="submitaction" type="submit" value="Batch Update Field" onclick="submitBatchUpdate(this.form); return false;"><?php echo (isset($LANG['BATCH_UP_FIELD'])?$LANG['BATCH_UP_FIELD']:'Batch Update Field'); ?></button>
 								</div>
 							</div>
 						</fieldset>
@@ -282,37 +366,14 @@ else{
 				<?php
 			}
 			?>
-			<div style="width:850px;clear:both;">
-				<div class='navpath' style="float:left">
-					<a href="../../index.php"><?php echo (isset($LANG['HOME'])?$LANG['HOME']:'Home'); ?></a> &gt;&gt;
-					<?php
-					if($crowdSourceMode){
-						?>
-						<a href="../specprocessor/crowdsource/index.php"><?php echo (isset($LANG['CENTRAL_CROWD'])?$LANG['CENTRAL_CROWD']:'Crowd Source Central'); ?></a> &gt;&gt;
-						<?php
-					}
-					else{
-						if(!$isGenObs || $IS_ADMIN){
-							?>
-							<a href="../misc/collprofiles.php?collid=<?php echo $collId; ?>&emode=1"><?php echo (isset($LANG['COL_MANAGEMENT'])?$LANG['COL_MANAGEMENT']:'Collection Management'); ?></a> &gt;&gt;
-							<?php
-						}
-						if($isGenObs){
-							?>
-							<a href="../../profile/viewprofile.php?tabindex=1"><?php echo (isset($LANG['PERS_MANAGEMENT'])?$LANG['PERS_MANAGEMENT']:'Personal Management'); ?></a> &gt;&gt;
-							<?php
-						}
-					}
-					?>
-					<b><?php echo (isset($LANG['TABLE_VIEW'])?$LANG['TABLE_VIEW']:'Occurrence Table View'); ?></b>
-				</div>
-				<?php
-				echo $navStr; ?>
+			<div style="display:flex;width:850px;clear:both;">
+				<?php echo $navStr; ?>
+
 			</div>
 			<?php
 			if($recArr){
 				?>
-				<div style="clear: both; padding-top:10px">
+				<div style="clear: both; padding-top:10px" id="skip-search">
 					<?php
 					$tableId = 'defaulttable';
 					$tableClass = 'styledtable';
@@ -321,7 +382,7 @@ else{
 						$tableClass = 'stripe hover order-column compact nowrap cell-border';
 					}
 					?>
-					<table id="<?php echo $tableId; ?>" class="<?php echo $tableClass; ?>" style="font-family:Arial;font-size:12px;">
+					<table id="<?php echo $tableId; ?>" class="<?php echo $tableClass; ?> table-scroll" title="<?php echo htmlspecialchars((isset($LANG['TABLE_VIEW']) ? $LANG['TABLE_VIEW'] : 'Occurrence Table View'), ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE); ?>" aria-describedby="table-desc">
 						<thead>
 							<tr>
 								<th><?php echo (isset($LANG['SYMB_ID'])?$LANG['SYMB_ID']:'Symbiota ID'); ?></th>
@@ -342,17 +403,19 @@ else{
 								echo "<tr ".($recCnt%2?'class="alt"':'').">\n";
 								echo '<td>';
 								$url = 'occurrenceeditor.php?csmode='.$crowdSourceMode.'&occindex='.($recCnt+$recStart).'&occid='.$id.'&collid='.$collId;
-								echo '<a href="'.$url.'" title="open in same window">'.$id.'</a> ';
-								echo '<a href="'.$url.'" target="_blank" title="'.(isset($LANG['NEW_WINDOW'])?$LANG['NEW_WINDOW']:'open in new window').'">';
-								echo '<img src="../../images/newwin.png" style="width:10px;" />';
+								echo '<a href="' . htmlspecialchars($url, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '" title="' . htmlspecialchars((isset($LANG['SAME_WINDOW'])?$LANG['SAME_WINDOW']:'open in same window'), ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '" aria-label="' .  htmlspecialchars($id, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '">' . htmlspecialchars($id, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '</a> ';
+								echo '<a href="' . htmlspecialchars($url, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '" target="_blank" title="' . (isset($LANG['NEW_WINDOW'])?$LANG['NEW_WINDOW']:'open in new window') . '" aria-label="' . (isset($LANG['NEW_WINDOW'])?$LANG['NEW_WINDOW']:'open in new window') . '">';
+								echo '<img src="../../images/newwin.png" style="width:1.1em;" alt="' . $LANG['IMG_LINK'] . '" />';
 								echo '</a>';
 								echo '</td>'."\n";
 								foreach($headerMap as $k => $v){
 									$displayStr = $occArr[$k];
-									if(strlen($displayStr) > 60){
-										$displayStr = substr($displayStr,0,60).'...';
+									if($displayStr){
+										if(strlen($displayStr) > 60){
+											$displayStr = substr($displayStr,0,60).'...';
+										}
 									}
-									if(!$displayStr) $displayStr = '&nbsp;';
+									elseif($displayStr === '') $displayStr = '&nbsp;';
 									echo '<td>'.$displayStr.'</td>'."\n";
 								}
 								echo "</tr>\n";
@@ -361,11 +424,10 @@ else{
 							?>
 						</tbody>
 					</table>
+					<p id="table-desc">
+							<?php echo htmlspecialchars((isset($LANG['TABLE_VIEW_DESC']) ? $LANG['TABLE_VIEW_DESC'] : 'Table displays occurrence information with columns showing Symbiota ID, Family, Event Date, Author, Location, and other details'), ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE); ?>
+					</p>
 				</div>
-				<div style="width:790px;">
-					<?php echo $navStr; ?>
-				</div>
-				*<?php echo (isset($LANG['CLICK_ID'])?$LANG['CLICK_ID']:'Click on the Symbiota identifier in the first column to open the editor.'); ?>
 				<?php
 			}
 			else{
