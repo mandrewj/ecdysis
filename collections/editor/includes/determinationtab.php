@@ -1,8 +1,10 @@
 <?php
 include_once('../../../config/symbini.php');
 include_once($SERVER_ROOT.'/classes/OccurrenceEditorDeterminations.php');
-if($LANG_TAG != 'en' && file_exists($SERVER_ROOT.'/content/lang/collections/editor/includes/determinationtab.'.$LANG_TAG.'.php')) include_once($SERVER_ROOT.'/content/lang/collections/editor/includes/determinationtab.'.$LANG_TAG.'.php');
-else include_once($SERVER_ROOT.'/content/lang/collections/editor/includes/determinationtab.en.php');
+include_once($SERVER_ROOT . '/classes/utilities/Language.php');
+
+Language::load('collections/editor/includes/determinationtab');
+
 header("Content-Type: text/html; charset=".$CHARSET);
 
 $occId = $_GET['occid'];
@@ -35,7 +37,7 @@ $specImgArr = $occManager->getImageMap();  // find out if there are images in or
 			if($editMode < 3){
 				?>
 				<a href="#" title="<?php echo $LANG['MODIFY_CURRENT_RANKING']; ?>" onclick="toggle('idrankeditdiv');toggle('idrankdiv');return false;">
-					<img src="../../images/edit.png" style="border:0px;width:12px;" />
+					<img src="../../images/edit.png" style="border:0px;width:1.2em;" />
 				</a>
 				<?php
 			}
@@ -75,7 +77,7 @@ $specImgArr = $occManager->getImageMap();  // find out if there are images in or
 						<input type="hidden" name="occindex" value="<?php echo $occIndex; ?>" />
 						<input type="hidden" name="csmode" value="<?php echo $crowdSourceMode; ?>" />
 						<input type="hidden" name="ovsid" value="<?php echo ($idRanking?$idRanking['ovsid']:''); ?>" />
-						<button type="submit" name="submitaction" value="Submit Verification Edits"><?php echo $LANG['SUBMIT_VERIFY_EDITS']; ?></button>
+						<button type="submit" name="submitaction" class="button" value="Submit Verification Edits"><?php echo $LANG['SUBMIT_VERIFY_EDITS']; ?></button>
 					</div>
 				</form>
 			</div>
@@ -110,7 +112,7 @@ $specImgArr = $occManager->getImageMap();  // find out if there are images in or
 		<fieldset style="margin:15px;padding:15px;">
 			<legend><b><?php echo $LANG['DET_HISTORY']; ?></b></legend>
 			<div style="float:right;">
-				<a href="#" onclick="toggle('newdetdiv');return false;" title="<?php echo $LANG['ADD_NEW_DET']; ?>" ><img style="border:0px;width:12px;" src="../../images/add.png" /></a>
+				<a href="#" onclick="toggle('newdetdiv');return false;" title="<?php echo $LANG['ADD_NEW_DET']; ?>" ><img style="border:0px;width:1.5em;" src="../../images/add.png" /></a>
 			</div>
 			<?php
 			if(!$detArr){
@@ -155,50 +157,50 @@ $specImgArr = $occManager->getImageMap();  // find out if there are images in or
 						}
 						?>
 						<div style='margin:3px;'>
-							<label for="identificationqualifier"><b><?php echo $LANG['ID_QUALIFIER']; ?>:</b></label>
-							<input type="text" name="identificationqualifier" id="identificationqualifier" title="e.g. cf, aff, etc" />
+							<b><?php echo $LANG['ID_QUALIFIER']; ?>:</b>
+							<input type="text" name="identificationqualifier" title="e.g. cf, aff, etc" />
 						</div>
 						<div style='margin:3px;'>
-							<label for="dafsciname"><b><?php echo $LANG['SCI_NAME']; ?>:</b></label>
-							<input type="text" id="dafsciname" name="sciname" style="background-color:lightyellow;width:350px;" onfocus="initDetAutocomplete(this.form)" />
+							<label for="dafsciname"><b><?= $LANG['SCI_NAME']; ?></b></label>:
+							<input type="text" id="dafsciname" name="sciname" required style="width:350px;" onfocus="initDetAutocomplete(this.form)" />
 							<input type="hidden" id="daftidtoadd" name="tidtoadd" value="" />
 							<input type="hidden" name="family" value="" />
 						</div>
 						<div style='margin:3px;'>
-							<label for="scientificnameauthorship"><b><?php echo $LANG['AUTHOR']; ?>:</b></label>
-							<input type="text" name="scientificnameauthorship" id="scientificnameauthorship" style="width:200px;" />
+							<label for="add_scientificnameauthorship"><b><?= $LANG['AUTHOR']; ?></b></label>:
+							<input id="add_scientificnameauthorship" type="text" name="scientificnameauthorship" style="width:200px;" />
 						</div>
 						<div style='margin:3px;'>
-							<label for="confidenceranking"><b><?php echo $LANG['CONFIDENCE_IN_DET']; ?>:</b></label>
-							<select name="confidenceranking" id="confidenceranking">
+							<b><?php echo $LANG['CONFIDENCE_IN_DET']; ?>:</b>
+							<select name="confidenceranking">
 								<option value="8"><?php echo $LANG['HIGH']; ?></option>
 								<option value="5" selected><?php echo $LANG['MEDIUM']; ?></option>
 								<option value="2"><?php echo $LANG['LOW']; ?></option>
 							</select>
 						</div>
 						<div style='margin:3px;'>
-							<label for="identifiedby"><b><?php echo $LANG['DETERMINER']; ?>:</b></label>
-							<input type="text" name="identifiedby" id="identifiedby" style="background-color:lightyellow;width:200px;" />
+							<label for="add_identifiedby"><b><?= $LANG['DETERMINER']; ?></b></label>:
+							<input id="add_identifiedby" type="text" name="identifiedby" required style="width:200px;" />
 						</div>
 						<div style='margin:3px;'>
-							<label for="dateidentified"><b><?php echo $LANG['DATE']; ?>:</b></label>
-							<input type="text" name="dateidentified" id="dateidentified" style="background-color:lightyellow;" onchange="detDateChanged(this.form);" />
+							<label for="add_dateidentified"><b><?= $LANG['DATE']; ?></b></label>:
+							<input id="add_dateidentified" type="text" name="dateidentified" required onchange="detDateChanged(this.form);" />
 						</div>
 						<div style='margin:3px;'>
-							<label for="identificationreferences"><b><?php echo $LANG['REFERENCE']; ?>:</b></label>
-							<input type="text" name="identificationreferences" id="identificationreferences" style="width:350px;" />
+							<b><?php echo $LANG['REFERENCE']; ?>:</b>
+							<input type="text" name="identificationreferences" style="width:350px;" />
 						</div>
 						<div style='margin:3px;'>
-							<label for="identificationremarks"><b><?php echo $LANG['NOTES']; ?>:</b></label>
-							<input type="text" name="identificationremarks" id="identificationremarks" style="width:350px;" />
+							<b><?php echo $LANG['NOTES']; ?>:</b>
+							<input type="text" name="identificationremarks" style="width:350px;" />
 						</div>
 						<div style='margin:3px;'>
-							<input type="checkbox" name="makecurrent" id="makecurrent" value="1" /><label for="makecurrent"> <?php echo $LANG['MAKE_THIS_CURRENT']; ?></label>
+							<input type="checkbox" name="makecurrent" value="1" /> <?php echo $LANG['MAKE_THIS_CURRENT']; ?>
 						</div>
 						<div style='margin:3px;'>
-							<input type="checkbox" name="printqueue" id="printqueue" value="1" /><label for="printqueue"> <?php echo $LANG['ADD_TO_PRINT']; ?></label>
+							<input type="checkbox" name="printqueue" value="1" /> <?php echo $LANG['ADD_TO_PRINT']; ?>
 						</div>
-						<div style='margin:3px; margin-top: 10px'>
+						<div style='margin:15px;'>
 							<input type="hidden" name="occid" value="<?php echo $occId; ?>" />
 							<input type="hidden" name="occindex" value="<?php echo $occIndex; ?>" />
 							<input type="hidden" name="annotatorname" value="<?php echo $annotatorname; ?>" />
@@ -207,8 +209,9 @@ $specImgArr = $occManager->getImageMap();  // find out if there are images in or
 							<input type="hidden" name="institutioncode" value="<?php echo $institutioncode; ?>" />
 							<input type="hidden" name="csmode" value="<?php echo $crowdSourceMode; ?>" />
 							<div>
-								<button type="submit" name="submitaction" id="submitaction" value="submitDetermination" ><?php echo $LANG['SUBMIT_DET']; ?></button>
+								<button type="submit" name="submitaction" class="button" value="submitDetermination" ><?php echo $LANG['SUBMIT_DET']; ?></button>
 							</div>
+							<p><?php include('requiredFieldInstruction.php') ?></p>
 						</div>
 					</fieldset>
 				</form>
@@ -222,7 +225,10 @@ $specImgArr = $occManager->getImageMap();  // find out if there are images in or
 					<div>
 						<?php
 						if($detRec['identificationqualifier']) echo $detRec['identificationqualifier'].' ';
-						echo '<b><i>'.$detRec['sciname'].'</i></b> '.$detRec['scientificnameauthorship'];
+							$nonItalicized = ' ';
+							if (!empty($detRec['nonItalicized']))
+								$nonItalicized .= $detRec['nonItalicized'];
+							echo '<b><i>' . $detRec['sciname'] . '</i>' . $nonItalicized .'</b> ' . $detRec['scientificnameauthorship'];
 						if($detRec['iscurrent']){
 							if($detRec['appliedstatus']){
 								echo '<span style="margin-left:10px;color:red;">'.$LANG['CURRENT_DET'].'</span>';
@@ -230,7 +236,7 @@ $specImgArr = $occManager->getImageMap();  // find out if there are images in or
 						}
 						if($canEdit){
 							?>
-							<a href="#" onclick="toggle('editdetdiv-<?php echo $detId;?>');return false;" title="<?php echo $LANG['EDIT_DET']; ?>"><img style="border:0px;width:12px;" src="../../images/edit.png" /></a>
+							<a href="#" onclick="toggle('editdetdiv-<?php echo $detId;?>');return false;" title="<?php echo $LANG['EDIT_DET']; ?>"><img style="border:0px;width:1.2em;" src="../../images/edit.png" /></a>
 							<?php
 						}
 						if(!$detRec['appliedstatus']){
@@ -284,8 +290,8 @@ $specImgArr = $occManager->getImageMap();  // find out if there are images in or
 									<input type="text" name="identificationqualifier" value="<?php echo $detRec['identificationqualifier']; ?>" title="e.g. cf, aff, etc" />
 								</div>
 								<div style='margin:3px;'>
-									<b><?php echo $LANG['SCI_NAME']; ?>:</b>
-									<input type="text" id="defsciname-<?php echo $detId;?>" name="sciname" value="<?php echo $detRec['sciname']; ?>" style="background-color:lightyellow;width:350px;" onfocus="initDetAutocomplete(this.form)" />
+									<label for="defsciname"><b><?= $LANG['SCI_NAME']; ?></b></label>:
+									<input type="text" id="defsciname-<?php echo $detId;?>" name="sciname" value="<?php echo $detRec['sciname']; ?>" required style="width:350px;" onfocus="initDetAutocomplete(this.form)" />
 									<input type="hidden" id="deftidtoadd" name="tidtoadd" value="" />
 									<input type="hidden" name="family" value="" />
 								</div>
@@ -294,12 +300,12 @@ $specImgArr = $occManager->getImageMap();  // find out if there are images in or
 									<input type="text" name="scientificnameauthorship" value="<?php echo $detRec['scientificnameauthorship']; ?>" style="width:200px;" />
 								</div>
 								<div style='margin:3px;'>
-									<b><?php echo $LANG['DETERMINER']; ?>:</b>
-									<input type="text" name="identifiedby" value="<?php echo $detRec['identifiedby']; ?>" style="background-color:lightyellow;width:200px;" />
+									<label for="edit_identifiedby"><b><?= $LANG['DETERMINER']; ?></b></label>:
+									<input id="edit_identifiedby" type="text" name="identifiedby" value="<?php echo $detRec['identifiedby']; ?>" required style="width:200px;" />
 								</div>
 								<div style='margin:3px;'>
-									<b><?php echo $LANG['DATE']; ?>:</b>
-									<input type="text" name="dateidentified" value="<?php echo $detRec['dateidentified']; ?>" style="background-color:lightyellow;" />
+									<label for="edit_identifiedby"><b><?= $LANG['DATE']; ?></b></label>:
+									<input id="edit_identifiedby" type="text" name="dateidentified" value="<?php echo $detRec['dateidentified']; ?>" required />
 								</div>
 								<div style='margin:3px;'>
 									<b><?php echo $LANG['REFERENCE']; ?>:</b>
@@ -321,13 +327,14 @@ $specImgArr = $occManager->getImageMap();  // find out if there are images in or
 									<input type="hidden" name="detid" value="<?php echo $detId; ?>" />
 									<input type="hidden" name="occindex" value="<?php echo $occIndex; ?>" />
 									<input type="hidden" name="csmode" value="<?php echo $crowdSourceMode; ?>" />
-									<button type="submit" name="submitaction" value="submitDeterminationEdit"><?php echo $LANG['SUBMIT_DET_EDITS']; ?></button>
+									<button type="submit" name="submitaction" class="button" value="submitDeterminationEdit"><?php echo $LANG['SUBMIT_DET_EDITS']; ?></button>
+									<p><?php include('requiredFieldInstruction.php') ?></p>
 								</div>
 							</form>
 							<?php
 							if($editMode < 3 && !$detRec['iscurrent']){
 								?>
-								<div style="padding:15px;background-color:lightgreen;width:280px;margin:15px;">
+								<div>
 									<form name="detremapform" action="occurrenceeditor.php" method="post">
 										<input type="hidden" name="occid" value="<?php echo $occId; ?>" />
 										<input type="hidden" name="detid" value="<?php echo $detId; ?>" />
@@ -336,7 +343,7 @@ $specImgArr = $occManager->getImageMap();  // find out if there are images in or
 										<?php
 										if($detRec['appliedstatus']){
 											?>
-											<button type="submit" name="submitaction" value="Make Determination Current" ><?php echo $LANG['MAKE_DET_CURRENT']; ?></button>
+											<button type="submit" name="submitaction" class="button" value="Make Determination Current" ><?php echo $LANG['MAKE_DET_CURRENT']; ?></button>
 											<?php
 										}
 										else{
@@ -351,13 +358,13 @@ $specImgArr = $occManager->getImageMap();  // find out if there are images in or
 								<?php
 							}
 							?>
-							<div style="padding:15px;background-color:lightblue;width:155px;margin:15px;">
+							<div style="width:155px;margin:15px;">
 								<form name="detdelform" action="occurrenceeditor.php" method="post" onsubmit="return window.confirm('<?php echo $LANG['SURE_DELETE']; ?>');">
 									<input type="hidden" name="occid" value="<?php echo $occId; ?>" />
 									<input type="hidden" name="detid" value="<?php echo $detId; ?>" />
 									<input type="hidden" name="occindex" value="<?php echo $occIndex; ?>" />
 									<input type="hidden" name=" <?php echo $crowdSourceMode; ?>" />
-									<button type="submit" name="submitaction" value="Delete Determination" ><?php echo $LANG['DELETE_DET']; ?></button>
+									<button class="button button-danger" type="submit" name="submitaction" value="Delete Determination" ><?php echo $LANG['DELETE_DET']; ?></button>
 								</form>
 							</div>
 						</fieldset>
