@@ -1,3 +1,87 @@
+const channel = new BroadcastChannel('editor-query-tab');
+
+const tabId = crypto.randomUUID();
+
+channel.onmessage = (event) => {
+  const msg = event.data;
+
+  function disableBatchUpdateButton(){
+    const batchUpdateButton = document.getElementById('batchUpdateButton');
+    if(!batchUpdateButton) return;
+    const disabledMessage = translations.OCCURENCE_EDITOR_COLLISION_WARNING || "Batch update disabled due to potential conflicting query activity in another tab.";
+    batchUpdateButton.setAttribute('aria-disabled', 'true');
+    batchUpdateButton.setAttribute('title', disabledMessage);
+    batchUpdateButton.setAttribute('tabindex', '0');
+    makePseudoDisabled(batchUpdateButton);
+    const descriptionId = 'batchUpdateButtonDisabledReason';
+    let descriptionNode = document.getElementById(descriptionId);
+    if(!descriptionNode){
+      descriptionNode = establishScreenReaderDescription(batchUpdateButton, descriptionId);
+    }
+    descriptionNode.textContent = disabledMessage;
+    batchUpdateButton.setAttribute('aria-describedby', descriptionId);
+    onlyAttachButtonDisablingHandlersOnce(batchUpdateButton);
+  }
+
+  function makePseudoDisabled(buttonNode){
+    buttonNode.style.opacity = '0.55';
+    buttonNode.style.cursor = 'not-allowed';
+    buttonNode.style.filter = 'grayscale(25%)';
+  }
+
+  function establishScreenReaderDescription(batchUpdateButton, descriptionId){
+    const descriptionNode = document.createElement('span');
+    descriptionNode.id = descriptionId;
+    descriptionNode.style.position = 'absolute';
+    descriptionNode.style.left = '-9999px';
+    descriptionNode.style.width = '1px';
+    descriptionNode.style.height = '1px';
+    descriptionNode.style.overflow = 'hidden';
+    batchUpdateButton.insertAdjacentElement('afterend', descriptionNode);
+    return descriptionNode;
+  }
+
+  function onlyAttachButtonDisablingHandlersOnce(buttonNode){ // tracks whether keydown or click have attached to the update button. If done already, prevent duplication by preventing it from happening again
+    if(!buttonNode.dataset.ariaDisabledHandlersBound){
+      buttonNode.addEventListener('click', function(event){
+        if(this.getAttribute('aria-disabled') === 'true'){
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }, {capture:true}); // capture: true stops other click handlers from receiving the event; this is apparently common practice for pseudo-disabled buttons that still need to be focusable
+      buttonNode.addEventListener('keydown', function(event){
+        if(this.getAttribute('aria-disabled') === 'true' && (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar')){
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }, {capture:true});
+      buttonNode.dataset.ariaDisabledHandlersBound = 'true';
+    }
+  }
+
+  switch (msg.type) {
+    case 'tab-opened':
+      if (msg.tabId === tabId) return;
+      disableBatchUpdateButton();
+      channel.postMessage({
+        type: 'tab-alive',
+        tabId
+      });
+      break;
+
+    case 'tab-alive':
+      if (msg.tabId === tabId) return;
+      disableBatchUpdateButton();
+      break;
+  }
+};
+
+channel.postMessage({
+  type: 'tab-opened',
+  tabId
+});
+
+
 //Query form 
 function verifyQueryForm(f){
 	//if(f.q_catalognumber.value == "" && f.q_othercatalognumbers.value == ""  
@@ -242,29 +326,46 @@ function resetCustomElements(x){
 	}
 }
 
-function toggle(target){
-	var ele = document.getElementById(target);
-	if(ele){
-		if(ele.style.display=="none" || ele.style.display==""){
-			ele.style.display="block";
-  		}
-	 	else {
-	 		ele.style.display="none";
-	 	}
+
+function toggle(target, displayStyle = "block") {
+  var ele = document.getElementById(target);
+
+  if (ele) {
+    if (ele.style.display == "none" || ele.style.display == "") {
+      ele.style.display = displayStyle;
+    } else {
+      ele.style.display = "none";
+    }
+  } else {
+    var divObjs = document.getElementsByTagName("div");
+    for (i = 0; i < divObjs.length; i++) {
+      var divObj = divObjs[i];
+      if (
+        divObj.getAttribute("class") == target ||
+        divObj.getAttribute("className") == target
+      ) {
+        if (divObj.style.display == "none") {
+          divObj.style.display = "";
+        } else {
+          divObj.style.display = "none";
+        }
+      }
+    }
+  }
+}
+
+function toggleButtonVisuals(el, containerId, linkedBtnIds) {
+	for (let id of linkedBtnIds) {
+		const linkedBtn = document.getElementById(id);
+		linkedBtn.classList.remove('active');
 	}
-	else{
-		var divObjs = document.getElementsByTagName("div");
-	  	for (i = 0; i < divObjs.length; i++) {
-	  		var divObj = divObjs[i];
-	  		if(divObj.getAttribute("class") == target || divObj.getAttribute("className") == target){
-				if(divObj.style.display=="none"){
-					divObj.style.display="";
-				}
-			 	else {
-			 		divObj.style.display="none";
-			 	}
-			}
-		}
+
+	const toggleContainer = document.getElementById(containerId)
+	
+	if(toggleContainer && toggleContainer.style.display === 'none') {
+		el.classList.remove('active');
+	} else {
+		el.classList.add('active');
 	}
 }
 

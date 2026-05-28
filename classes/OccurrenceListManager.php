@@ -15,7 +15,7 @@ class OccurrenceListManager extends OccurrenceManager{
  		parent::__destruct();
 	}
 
-	public function getSpecimenMap($pageRequest,$cntPerPage){
+	public function getSpecimenMap($pageRequest, $cntPerPage){
 		$retArr = Array();
 		$isSecuredReader = false;
 		if($GLOBALS['USER_RIGHTS']){
@@ -25,22 +25,36 @@ class OccurrenceListManager extends OccurrenceManager{
 		}
 		$occArr = array();
 		$sqlWhere = $this->getSqlWhere();
+
 		if(!$this->recordCount || $this->reset) $this->setRecordCnt($sqlWhere);
-		$sql = 'SELECT o.occid, c.collid, c.institutioncode, c.collectioncode, c.collectionname, c.icon, o.institutioncode AS instcodeoverride, o.collectioncode AS collcodeoverride, '.
-			'o.catalognumber, o.family, o.sciname, o.scientificnameauthorship, o.tidinterpreted, o.recordedby, o.recordnumber, o.eventdate, o.year, o.startdayofyear, o.enddayofyear, '.
-			'o.country, o.stateprovince, o.county, o.locality, o.decimallatitude, o.decimallongitude, o.localitysecurity, o.localitysecurityreason, '.
-			'o.habitat, o.substrate, o.minimumelevationinmeters, o.maximumelevationinmeters, o.observeruid, c.sortseq '.
-			'FROM omoccurrences o INNER JOIN omcollections c ON o.collid = c.collid ';
+
+		$sqlWhere .= $this->getGeoJsonBoundingBoxWhere();
+
+		$sql = "";
+		if (array_key_exists("earlyInterval",$this->searchTermArr) || array_key_exists("lateInterval",$this->searchTermArr)) {
+			$sql .= "WITH searchRange AS (SELECT COALESCE((SELECT myaStart FROM omoccurpaleogts WHERE gtsterm = '"  . ($this->searchTermArr["earlyInterval"] ?? '') . "'), 5000) AS searchStart,";
+			$sql .= "COALESCE((SELECT myaEnd FROM omoccurpaleogts WHERE gtsterm = '" . ($this->searchTermArr["lateInterval"] ?? '') ."'), 0) AS searchEnd)";
+		}
+		$sql .= 'SELECT o.occid, c.collid, c.institutioncode, c.collectioncode, c.collectionname, c.icon, o.institutioncode AS instcodeoverride, o.collectioncode AS collcodeoverride, '.
+			'o.catalognumber, o.family, o.sciname, o.scientificnameauthorship, o.tidinterpreted, o.recordedby, o.recordnumber, o.eventdate, o.eventtime, '.
+			'o.country, o.stateprovince, o.county, o.locality, o.decimallatitude, o.decimallongitude, o.recordsecurity, o.securityreason, '.
+			'o.habitat, o.substrate, o.minimumelevationinmeters, o.maximumelevationinmeters, o.observeruid, c.sortseq ';
+		if (!empty($GLOBALS['ACTIVATE_PALEO']) && $sqlWhere)
+			$sql .= ', paleo.formation, paleo.earlyInterval, paleo.lateInterval ';
+		$sql .= 'FROM omoccurrences o INNER JOIN omcollections c ON o.collid = c.collid ';
 		$sql .= $this->getTableJoins($sqlWhere).$sqlWhere;
 		//Don't allow someone to query all occurrences if there are no conditions
 		if(!$sqlWhere) $sql .= 'WHERE o.occid IS NULL ';
-		if($this->sortArr) $sql .= 'ORDER BY '.implode(',',$this->sortArr);
-		else{
-			$sql .= 'ORDER BY c.sortseq, c.collectionname ';
-			$pageRequest = ($pageRequest - 1)*$cntPerPage;
+		if($this->sortArr){
+			$sql .= 'ORDER BY ' . implode(',', $this->sortArr) . ', o.collid ';
 		}
-		$sql .= ' LIMIT '.$pageRequest.",".$cntPerPage;
-		//echo "<div>Spec sql: ".$sql."</div>";
+		else{
+			$sql .= 'ORDER BY o.collid ';
+		}
+		if($pageRequest > 0) $pageRequest = ($pageRequest - 1) * $cntPerPage;
+		$sql .= ' LIMIT ' . $pageRequest . ',' . $cntPerPage;
+		//echo '<div style="width: 1200px">' . $sql . '</div>';
+		// echo $sql; exit; // @TODO here
 		$result = $this->conn->query($sql);
 		if($result){
 			$securityCollArr = array();
@@ -61,13 +75,17 @@ class OccurrenceListManager extends OccurrenceManager{
 					if(!$retArr[$row->occid]['collcode']) $retArr[$row->occid]['collcode'] = $row->collcodeoverride;
 					elseif($retArr[$row->occid]['collcode'] != $row->collcodeoverride) $retArr[$row->occid]['collcode'] .= '-'.$row->collcodeoverride;
 				}
-				$retArr[$row->occid]['collname'] = $this->cleanOutStr($row->collectionname);
 				$retArr[$row->occid]['icon'] = $row->icon;
 				$retArr[$row->occid]['catnum'] = $this->cleanOutStr($row->catalognumber);
 				$retArr[$row->occid]['family'] = $this->cleanOutStr($row->family);
 				$retArr[$row->occid]['sciname'] = ($row->sciname?$this->cleanOutStr($row->sciname):'undetermined');
 				$retArr[$row->occid]['tid'] = $row->tidinterpreted;
 				$retArr[$row->occid]['author'] = $this->cleanOutStr($row->scientificnameauthorship);
+				if (!empty($GLOBALS['ACTIVATE_PALEO'])) {
+					$retArr[$row->occid]['earlyInterval'] = $this->cleanOutStr($row->earlyInterval);
+					$retArr[$row->occid]['lateInterval'] = $this->cleanOutStr($row->lateInterval);
+					$retArr[$row->occid]['formation'] = $this->cleanOutStr($row->formation);
+				}
 				/*
 				if(isset($row->scinameprotected) && $row->scinameprotected && !$securityClearance){
 					$retArr[$row->occid]['taxonsecure'] = 1;
@@ -82,13 +100,15 @@ class OccurrenceListManager extends OccurrenceManager{
 				$retArr[$row->occid]['state'] = $this->cleanOutStr($row->stateprovince);
 				$retArr[$row->occid]['county'] = $this->cleanOutStr($row->county);
 				$retArr[$row->occid]['obsuid'] = $row->observeruid;
-				$retArr[$row->occid]['localitysecurity'] = $row->localitysecurity;
-				if($securityClearance || $row->localitysecurity != 1){
-					$retArr[$row->occid]['locality'] = str_replace('.,',',',$this->cleanOutStr(trim($row->locality,' ,;')));
+				$retArr[$row->occid]['recordsecurity'] = $row->recordsecurity;
+				if($securityClearance || $row->recordsecurity != 1){
+					$locStr = $row->locality ?? '';
+					$retArr[$row->occid]['locality'] = str_replace('.,',',',$this->cleanOutStr(trim($locStr,' ,;')));
 					$retArr[$row->occid]['declat'] = $row->decimallatitude;
 					$retArr[$row->occid]['declong'] = $row->decimallongitude;
 					$retArr[$row->occid]['collnum'] = $this->cleanOutStr($row->recordnumber);
 					$retArr[$row->occid]['date'] = $row->eventdate;
+					$retArr[$row->occid]['eventtime'] = $this->cleanOutStr($row->eventtime);
 					$retArr[$row->occid]['habitat'] = $this->cleanOutStr($row->habitat);
 					$retArr[$row->occid]['substrate'] = $this->cleanOutStr($row->substrate);
 					$elevStr = $row->minimumelevationinmeters;
@@ -110,12 +130,28 @@ class OccurrenceListManager extends OccurrenceManager{
 		return $retArr;
 	}
 
-	private function setImages($occArr,&$retArr){
-		$sql = 'SELECT occid, thumbnailurl FROM images WHERE occid IN('.implode(',',$occArr).') ORDER BY occid, sortOccurrence';
+	private function setImages($occArr, &$retArr): void {
+		$sql = 'SELECT occid, thumbnailurl, mediaType FROM media WHERE occid IN('.implode(',',$occArr).') ORDER BY occid, sortOccurrence';
 		$rs = $this->conn->query($sql);
 		$previousOccid = 0;
 		while($r = $rs->fetch_object()){
-			if($r->occid != $previousOccid) $retArr[$r->occid]['img'] = $r->thumbnailurl;
+			if($r->occid != $previousOccid) {
+				$thumbnail = $r->mediaType === 'audio'?
+				$GLOBALS['CLIENT_ROOT'] . '/images/speaker_thumbnail.png':
+				$r->thumbnailurl;
+
+				$retArr[$r->occid]['media'] = [
+					'thumbnail' => $thumbnail,
+					'mediaType' => $r->mediaType
+				];
+			}
+
+			if($r->mediaType === 'image' && !isset($retArr[$r->occid]['has_image'])) {
+				$retArr[$r->occid]['has_image'] = true;
+			} else if($r->mediaType === 'audio' && !isset($retArr[$r->occid]['has_audio'])) {
+				$retArr[$r->occid]['has_audio'] = true;
+			}
+
 			$previousOccid = $r->occid;
 		}
 		$rs->free();
@@ -123,8 +159,13 @@ class OccurrenceListManager extends OccurrenceManager{
 
 	private function setRecordCnt($sqlWhere){
 		if($sqlWhere){
-			$sql = "SELECT COUNT(DISTINCT o.occid) AS cnt FROM omoccurrences o ".$this->getTableJoins($sqlWhere).$sqlWhere;
-			//echo "<div>Count sql: ".$sql."</div>";
+			$sql = "";
+			if (!empty($this->searchTermArr['earlyInterval']) || !empty($this->searchTermArr['lateInterval'])) {
+				$sql .= "WITH searchRange AS (SELECT COALESCE((SELECT myaStart FROM omoccurpaleogts WHERE gtsterm = '"  . ($this->searchTermArr['earlyInterval'] ?? '') . "'), 5000) AS searchStart,";
+				$sql .= "COALESCE((SELECT myaEnd FROM omoccurpaleogts WHERE gtsterm = '" . ($this->searchTermArr['lateInterval'] ?? '') . "'), 0) AS searchEnd) ";
+			}
+			$sql .= "SELECT COUNT(DISTINCT o.occid) AS cnt FROM omoccurrences o ".$this->getTableJoins($sqlWhere).$sqlWhere;
+			// echo "<div>Count sql: ".$sql."</div>"; exit; // @TODO here
 			$result = $this->conn->query($sql);
 			if($result){
 				if($row = $result->fetch_object()){
@@ -139,8 +180,10 @@ class OccurrenceListManager extends OccurrenceManager{
 		return $this->recordCount;
 	}
 
-	public function addSort($field,$direction){
-		$this->sortArr[] = trim($field.' '.$direction);
+	public function addSort($field, $direction){
+		if($field){
+			$this->sortArr[] = $this->cleanInStr($field) . ($direction ? ' desc' : '');
+		}
 	}
 
 	//Misc support functions
@@ -148,11 +191,11 @@ class OccurrenceListManager extends OccurrenceManager{
 		$retArr = array();
 		$symbUid = $GLOBALS['SYMB_UID'];
 		if($symbUid){
-			$sql = 'SELECT DISTINCT datasetid, name FROM omoccurdatasets WHERE uid = '.$symbUid.' OR datasetid IN(SELECT tablepk FROM userroles WHERE uid = '.$symbUid.' AND role IN("DatasetAdmin","DatasetEditor"))';
+			$sql = 'SELECT DISTINCT datasetid, IFNULL(datasetName, name) as datasetName FROM omoccurdatasets WHERE uid = '.$symbUid.' OR datasetid IN(SELECT tablepk FROM userroles WHERE uid = '.$symbUid.' AND role IN("DatasetAdmin","DatasetEditor"))';
 			//echo "<div>Count sql: ".$sql."</div>";
 			$rs = $this->conn->query($sql);
 			while($r = $rs->fetch_object()){
-				$retArr[$r->datasetid] = $r->name;
+				$retArr[$r->datasetid] = $r->datasetName;
 			}
 			$rs->free();
 		}
@@ -161,14 +204,14 @@ class OccurrenceListManager extends OccurrenceManager{
 
 	public function getCloseTaxaMatch($name){
 		$retArr = array();
-		$searchName = $this->cleanInStr($name);
+		$searchName = trim($name);
 		$sql = 'SELECT tid, sciname FROM taxa WHERE soundex(sciname) = soundex(?)';
 		$stmt = $this->conn->prepare($sql);
 		$stmt->bind_param('s', $searchName);
 		$stmt->execute();
 		$stmt->bind_result($tid, $sciname);
 		while($stmt->fetch()){
-			if($searchName != $sciname) $retArr[$tid] = $sciname;
+			if($searchName != $sciname) $retArr[$tid] = $this->cleanOutStr($sciname);
 		}
 		$stmt->close();
 		return $retArr;

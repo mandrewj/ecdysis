@@ -14,6 +14,9 @@
  * importimage (default = false): 0 = image URLs NOT included for ingestion, 1 = image URLs included for ingestion
  */
 
+//Due to significant increase in nefarious bot traffic, deactivating tool in preference for integration into Symbiota 4.0 API
+exit;
+
 date_default_timezone_set('America/Phoenix');
 include_once('../../config/symbini.php');
 require_once($SERVER_ROOT.'/classes/SpecUploadBase.php');
@@ -21,11 +24,11 @@ require_once($SERVER_ROOT.'/classes/SpecUploadFile.php');
 require_once($SERVER_ROOT.'/classes/SpecUploadDwca.php');
 
 $uploadType = isset($_REQUEST['uploadtype']) ? filter_var($_REQUEST['uploadtype'], FILTER_SANITIZE_NUMBER_INT) : '';
-$securityKey = isset($_REQUEST['key']) ? filter_var($_REQUEST['key'], FILTER_SANITIZE_STRING):'';
-$filePath = array_key_exists('filepath', $_REQUEST) ? filter_var($_REQUEST['filepath'], FILTER_SANITIZE_STRING) : false;
+$securityKey = isset($_REQUEST['key']) ? $_REQUEST['key'] : '';
+$filePath = array_key_exists('filepath', $_REQUEST) ? $_REQUEST['filepath'] : false;
 $importIdent = array_key_exists('importident', $_REQUEST) ? filter_var($_REQUEST['importident'], FILTER_SANITIZE_NUMBER_INT) : 1;
 $importImage = array_key_exists('importimage', $_REQUEST) ? filter_var($_REQUEST['importimage'], FILTER_SANITIZE_NUMBER_INT) : 1;
-$sourceType = array_key_exists('sourcetype', $_REQUEST) ? filter_var($_REQUEST['sourcetype'], FILTER_SANITIZE_STRING) : '';
+$sourceType = array_key_exists('sourcetype', $_REQUEST) ? $_REQUEST['sourcetype'] : '';
 
 if(!$uploadType) exit('ERROR: uploadtype is required and is null ');
 

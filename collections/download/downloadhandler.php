@@ -7,6 +7,16 @@ include_once($SERVER_ROOT . '/classes/DwcArchiverCore.php');
 $sourcePage = array_key_exists("sourcepage", $_REQUEST) ? $_REQUEST["sourcepage"] : "specimen";
 $schema = array_key_exists("schema", $_REQUEST) ? $_REQUEST["schema"] : "symbiota";
 $cSet = array_key_exists("cset", $_POST) ? $_POST["cset"] : '';
+$isPublicSearch = (empty($_REQUEST['publicsearch'])) ? 0 : 1;		//Value false by default
+
+$token = $_POST['downloadToken'] ?? null;
+if ($token) {
+	setcookie('downloadToken', $token, [
+		'expires' => time() + 60,
+		'path' => '/',
+		'samesite' => 'Lax'
+	]);
+}
 
 if ($schema == 'backup') {
 	$collid = $_POST['collid'];
@@ -20,14 +30,18 @@ if ($schema == 'backup') {
 			$dwcaHandler->setIncludeDets(1);
 			$dwcaHandler->setIncludeImgs(1);
 			$dwcaHandler->setIncludeAttributes(1);
-			if ($dwcaHandler->hasMaterialSamples()) $dwcaHandler->setIncludeMaterialSample(1);
+			if ($dwcaHandler->hasMaterialSamples($collid)) $dwcaHandler->setIncludeMaterialSample(1);
+			if ($dwcaHandler->hasIdentifiers($collid)) $dwcaHandler->setIncludeIdentifiers(1);
+			if ($dwcaHandler->hasAssociations($collid)) $dwcaHandler->setIncludeAssociations(1);
 			$dwcaHandler->setRedactLocalities(0);
 			$dwcaHandler->setCollArr($collid);
 
 			$archiveFile = $dwcaHandler->createDwcArchive();
 
 			if ($archiveFile) {
-				//ob_start();
+				ob_start();
+				ob_clean();
+				ob_end_flush();
 				header('Content-Description: Symbiota Occurrence Backup File (DwC-Archive data package)');
 				header('Content-Type: application/zip');
 				header('Content-Disposition: attachment; filename=' . basename($archiveFile));
@@ -40,15 +54,18 @@ if ($schema == 'backup') {
 				readfile($archiveFile);
 				unlink($archiveFile);
 			} else {
-				echo 'ERROR creating output file. Query probably did not include any records.';
+				$errMsg = $dwcaHandler->getErrorMessage();
+				if($errMsg) echo $errMsg;
+				else echo 'ERROR creating output file. Query probably did not include any records.';
 			}
 		}
 	}
 } else {
 	$zip = (array_key_exists('zip', $_POST) ? $_POST['zip'] : 0);
-	$format = (array_key_exists('format', $_POST) ? $_POST['format'] : 'csv');
+	$allowedFormats = ['csv', 'tab'];
+	$formatFromPost = (array_key_exists('format', $_POST) ? $_POST['format'] : 'csv');
+	$format = in_array($formatFromPost, $allowedFormats) ? $formatFromPost : 'csv';
 	$extended = (array_key_exists('extended', $_POST) ? $_POST['extended'] : 0);
-	$overrideConditionLimit = (array_key_exists('overrideconditionlimit', $_POST) ? $_POST['overrideconditionlimit'] : 0);
 
 	$redactLocalities = 1;
 	$rareReaderArr = array();
@@ -71,10 +88,12 @@ if ($schema == 'backup') {
 	} else {
 		$occurManager = new OccurrenceMapManager();
 	}
+	$occurManager->getSearchTerm('customfield');
+	$occurManager->setApplyFullProtections(false); //Full security protections for downloads are handled within the DwcArchiverCore class
 	if ($schema == 'georef') {
 		$dlManager = new OccurrenceDownload();
-		if (array_key_exists('publicsearch', $_POST)) $dlManager->setIsPublicDownload();
-		if (array_key_exists('publicsearch', $_POST) && $_POST["publicsearch"]) {
+		if($isPublicSearch){
+			$dlManager->setIsPublicDownload($isPublicSearch);
 			$dlManager->setSqlWhere($occurManager->getSqlWhere());
 		}
 		$dlManager->setSchemaType($schema);
@@ -82,8 +101,8 @@ if ($schema == 'backup') {
 		$dlManager->setCharSetOut($cSet);
 		$dlManager->setDelimiter($format);
 		$dlManager->setZipFile($zip);
-		$dlManager->addCondition('decimalLatitude', 'NOTNULL', '');
-		$dlManager->addCondition('decimalLongitude', 'NOTNULL', '');
+		$dlManager->addCondition('decimalLatitude', 'NOT_NULL', '');
+		$dlManager->addCondition('decimalLongitude', 'NOT_NULL', '');
 		if (array_key_exists('targetcollid', $_POST) && $_POST['targetcollid']) {
 			$dlManager->addCondition('collid', 'EQUALS', $_POST['targetcollid']);
 		}
@@ -96,7 +115,7 @@ if ($schema == 'backup') {
 		$dlManager->downloadData();
 	} elseif ($schema == 'checklist') {
 		$dlManager = new OccurrenceDownload();
-		if (array_key_exists('publicsearch', $_POST) && $_POST['publicsearch']) {
+		if($isPublicSearch){
 			$dlManager->setSqlWhere($occurManager->getSqlWhere());
 		}
 		$dlManager->setSchemaType($schema);
@@ -118,9 +137,11 @@ if ($schema == 'backup') {
 			$dwcaHandler->setIncludeDets(0);
 			$dwcaHandler->setIncludeImgs(0);
 			$dwcaHandler->setIncludeAttributes(0);
-			$dwcaHandler->setOverrideConditionLimit(true);
-			$dwcaHandler->addCondition('catalognumber', 'NOTNULL');
-			$dwcaHandler->addCondition('locality', 'NOTNULL');
+			$dwcaHandler->setIncludeMaterialSample(0);
+			$dwcaHandler->setIncludeIdentifiers(0);
+			$dwcaHandler->setIncludeAssociations(0);
+			$dwcaHandler->addCondition('catalognumber', 'NOT_NULL');
+			$dwcaHandler->addCondition('locality', 'NOT_NULL');
 			if (array_key_exists('processingstatus', $_POST) && $_POST['processingstatus']) {
 				$dwcaHandler->addCondition('processingstatus', 'EQUALS', $_POST['processingstatus']);
 			}
@@ -131,43 +152,60 @@ if ($schema == 'backup') {
 			}
 		} else {
 			//Is an occurrence download
-			if (array_key_exists('publicsearch', $_POST)) $dwcaHandler->setIsPublicDownload();
+			if ($isPublicSearch) $dwcaHandler->setIsPublicDownload($isPublicSearch);
 			$dwcaHandler->setCharSetOut($cSet);
 			$dwcaHandler->setSchemaType($schema);
 			$dwcaHandler->setExtended($extended);
-			$dwcaHandler->setOverrideConditionLimit($overrideConditionLimit);
 			$dwcaHandler->setDelimiter($format);
 			$dwcaHandler->setRedactLocalities($redactLocalities);
 			if ($rareReaderArr) $dwcaHandler->setRareReaderArr($rareReaderArr);
 
-			if (array_key_exists('publicsearch', $_POST) && $_POST['publicsearch']) {
-				$dwcaHandler->setCustomWhereSql($occurManager->getSqlWhere());
-			} else {
-				//Request is coming from exporter.php for collection manager tools
+			if(isset($_POST['source']) && $_POST['source'] == 'collection_exporter'){
+				//Request is coming from exporter.php, thus we need to do some custom adjustments
 				$dwcaHandler->setCollArr($_POST['targetcollid']);
-				if (array_key_exists('processingstatus', $_POST) && $_POST['processingstatus']) {
+				if (!empty($_POST['processingstatus'])) {
 					$dwcaHandler->addCondition('processingstatus', 'EQUALS', $_POST['processingstatus']);
 				}
-				if (array_key_exists('customfield1', $_POST) && $_POST['customfield1']) {
-					$dwcaHandler->addCondition($_POST['customfield1'], $_POST['customtype1'], $_POST['customvalue1']);
+				for ($x = 1; $x < 4; $x++){
+					if (!empty($_POST['customfield' . $x])) {
+						$dwcaHandler->addCondition($_POST['customfield' . $x], $_POST['customtype' . $x], $_POST['customvalue' . $x]);
+					}
 				}
-				if (array_key_exists('customfield2', $_POST) && $_POST['customfield2']) {
-					$dwcaHandler->addCondition($_POST['customfield2'], $_POST['customtype2'], $_POST['customvalue2']);
-				}
-				if (array_key_exists('customfield3', $_POST) && $_POST['customfield3']) {
-					$dwcaHandler->addCondition($_POST['customfield3'], $_POST['customtype3'], $_POST['customvalue3']);
-				}
-				if (array_key_exists('stateid', $_POST) && $_POST['stateid']) {
+				if (!empty($_POST['stateid'])) {
 					$dwcaHandler->addCondition('stateid', 'EQUALS', $_POST['stateid']);
 				} elseif (array_key_exists('traitid', $_POST) && $_POST['traitid']) {
 					$dwcaHandler->addCondition('traitid', 'EQUALS', $_POST['traitid']);
 				}
-				if (array_key_exists('newrecs', $_POST) && $_POST['newrecs'] == 1) {
-					$dwcaHandler->addCondition('dbpk', 'NULL');
-					$dwcaHandler->addCondition('catalognumber', 'NOTNULL');
+				if (isset($_POST['newrecs']) && $_POST['newrecs'] == 1) {
+					$dwcaHandler->addCondition('dbpk', 'IS_NULL');
+					$dwcaHandler->addCondition('catalognumber', 'NOT_NULL');
 				}
 			}
+			$dwcaHandler->setCustomWhereSql($occurManager->getSqlWhere());
+
+			// Added for Occurrence Table Display Editor Download Functionality
+			for ($i = 1; $i  < 10; $i ++) {
+				if ($occurManager->getSearchTerm('customfield' . $i)) {
+					$dwcaHandler->addCondition(
+						$occurManager->getSearchTerm('customfield' . $i),
+						$occurManager->getSearchTerm('customtype' . $i),
+						$occurManager->getSearchTerm('customvalue' . $i)
+					);
+				}
+			}
+
+			// Traits Support
+			if ($occurManager->getSearchTerm('stateid')) {
+				$dwcaHandler->addCondition('stateid', 'EQUALS', $occurManager->getSearchTerm('stateid'));
+			} elseif ($occurManager->getSearchTerm('traitid')) {
+				$dwcaHandler->addCondition('traitid', 'EQUALS', $occurManager->getSearchTerm('traitid'));
+			}
+			if ($occurManager->getSearchTerm('polygons')) {
+				$dwcaHandler->setPolygons($occurManager->getSearchTerm('polygons'));
+			}
+			$dwcaHandler->setPaleoWithSql($occurManager->getPaleoSqlWith());
 		}
+
 		$outputFile = null;
 		if ($zip) {
 			//Ouput file is a zip file
@@ -179,6 +217,10 @@ if ($schema == 'backup') {
 			$dwcaHandler->setIncludeAttributes($includeAttributes);
 			$includeMaterialSample = (array_key_exists('materialsample', $_POST) ? 1 : 0);
 			$dwcaHandler->setIncludeMaterialSample($includeMaterialSample);
+			$includeIdentifiers = (array_key_exists('identifiers', $_POST) ? 1 : 0);
+			$dwcaHandler->setIncludeIdentifiers($includeIdentifiers);
+			$includeAssociations = (array_key_exists('associations', $_POST) ? 1 : 0);
+			$dwcaHandler->setIncludeAssociations($includeAssociations);
 
 			$outputFile = $dwcaHandler->createDwcArchive();
 		} else {
@@ -198,6 +240,9 @@ if ($schema == 'backup') {
 				$contentDesc .= 'Archive ';
 			}
 			$contentDesc .= 'File';
+			ob_start();
+			ob_clean();
+			ob_end_flush();
 			header('Content-Description: ' . $contentDesc);
 
 			if ($zip) {
@@ -222,7 +267,8 @@ if ($schema == 'backup') {
 		} else {
 			header("Content-type: text/plain");
 			header("Content-Disposition: attachment; filename=NoData.txt");
-			echo 'The query failed to return records. Please modify query criteria and try again.';
+			if($dwcaHandler->getErrorMessage()) echo $dwcaHandler->getErrorMessage();
+			else echo 'The query failed to return records. Please modify query criteria and try again.';
 		}
 	}
 }

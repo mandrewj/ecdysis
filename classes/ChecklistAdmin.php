@@ -31,23 +31,25 @@ class ChecklistAdmin extends Manager{
 		$newClid = 0;
 		if($GLOBALS['SYMB_UID'] && isset($postArr['name'])){
 			$postArr['defaultsettings'] = $this->getDefaultJson($postArr);
+			$postArr['dynamicProperties'] = $this->getDynamicPropertiesJsonWithExternalServiceDetails($postArr);
 
 			$inventoryManager = new ImInventories();
-			$newClid = $inventoryManager->insertChecklist($postArr);
-
-			if($newClid){
+			if($inventoryManager->insertChecklist($postArr)){
+				$newClid = $inventoryManager->getPrimaryKey();
 				//Add permissions to allow creater to be an editor and then reset user permissions stored in browser cache
 				$inventoryManager->insertUserRole($GLOBALS['SYMB_UID'], 'ClAdmin', 'fmchecklists', $newClid, $GLOBALS['SYMB_UID']);
 				$newPManager = new ProfileManager();
-				$newPManager->setUserName($GLOBALS['USERNAME']);
-				$newPManager->authenticate();
+				$newPManager->setUid($GLOBALS['SYMB_UID']);
+				$newPManager->setUserRights();
 				if($postArr['type'] == 'excludespp' && $postArr['excludeparent']){
 					//If is an exclusion checklists, link to parent checklist
-					if(!$inventoryManager->insertChildChecklist($postArr['excludeparent'], $newClid, $GLOBALS['SYMB_UID'])){
+					$inventoryManager->setClid($postArr['excludeparent']);
+					if(!$inventoryManager->insertChildChecklist($newClid, $GLOBALS['SYMB_UID'])){
 						$this->errorMessage = 'ERROR linking exclusion checklist to parent: '.$this->conn->error;
 					}
 				}
 			}
+			else echo $inventoryManager->errorMessage;
 		}
 		return $newClid;
 	}
@@ -56,7 +58,7 @@ class ChecklistAdmin extends Manager{
 		$status = false;
 		if($GLOBALS['SYMB_UID'] && isset($postArr['name'])){
 			$postArr['defaultsettings'] = $this->getDefaultJson($postArr);
-
+			$postArr['dynamicProperties'] = $this->getDynamicPropertiesJsonWithExternalServiceDetails($postArr);
 			$inventoryManager = new ImInventories();
 			$inventoryManager->setClid($this->clid);
 			$status = $inventoryManager->updateChecklist($postArr);
@@ -82,9 +84,69 @@ class ChecklistAdmin extends Manager{
 		$defaultArr['dvoucherimages'] = array_key_exists('dvoucherimages',$postArr)?1:0;
 		$defaultArr['dvouchers'] = array_key_exists('dvouchers',$postArr)?1:0;
 		$defaultArr['dauthors'] = array_key_exists('dauthors',$postArr)?1:0;
+		$defaultArr['dsubgenera'] = array_key_exists('dsubgenera',$postArr)?1:0;
 		$defaultArr['dalpha'] = array_key_exists('dalpha',$postArr)?1:0;
 		$defaultArr['activatekey'] = array_key_exists('activatekey',$postArr)?1:0;
 		return json_encode($defaultArr);
+	}
+
+	private function getDynamicPropertiesJsonWithExternalServiceDetails($postArr){
+		$dynpropArr = array();
+		if(!empty($postArr['dynamicProperties'])) $dynpropArr = json_decode($postArr['dynamicProperties']);
+		if(!empty($postArr['externalservice']) && !empty($postArr['externalserviceid'])){
+			$dynpropArr['externalservice'] = $postArr['externalservice'];
+			$dynpropArr['externalserviceid'] = $postArr['externalserviceid'];
+			if($dynpropArr['externalservice'] == 'inaturalist') {
+				$dynpropArr['externalserviceiconictaxon'] = array_key_exists('externalserviceiconictaxon',$postArr)?$postArr['externalserviceiconictaxon']:'';
+				$requestUrl = 'https://api.inaturalist.org/v1/projects/' . $dynpropArr['externalserviceid'];
+				$inatProjectJson = json_decode(file_get_contents($requestUrl));
+				$inatProjectJson = $inatProjectJson->results[0];
+				if(!empty($inatProjectJson->place_id)){
+					$requestStr = 'https://api.inaturalist.org/v1/places/' . $inatProjectJson->place_id;
+					$inatPlaceJson = json_decode(file_get_contents($requestStr));
+					$inatPlaceCoords = $inatPlaceJson->results[0]->bounding_box_geojson->coordinates[0];
+					$minlon = $maxlon = $prevminlon = $prevmaxlon = $inatPlaceCoords[0][0];
+					$minlat = $maxlat = $prevminlat = $prevmaxlat = $inatPlaceCoords[0][1];
+					for ($k = 1 ; $k < 4; $k++) {
+						if ($inatPlaceCoords[$k][0] < $prevminlon) {
+							$minlon = $prevminlon = $inatPlaceCoords[$k][0];
+						}
+						if ($inatPlaceCoords[$k][1] < $prevminlat) {
+							$minlat = $prevminlat = $inatPlaceCoords[$k][1];
+						}
+						if ($inatPlaceCoords[$k][0] > $prevmaxlon) {
+							$maxlon = $prevmaxlon = $inatPlaceCoords[$k][0];
+						}
+						if ($inatPlaceCoords[$k][1] > $prevmaxlat) {
+							$maxlat = $prevmaxlat = $inatPlaceCoords[$k][1];
+						}
+					}
+
+					/*
+					 $maxlondiff = $maxlatdiff = 0;
+					 $bboxloncoords = $bboxlatcoords = array();
+					 for ($k = 0 ; $k < 4; $k++) {
+					 if(isset($prevzero)) {
+					 $londiff = abs($inatPlaceCoords[$k][0] - $prevzero);
+					 $latdiff = abs($inatPlaceCoords[$k][1] - $prevone);
+					 $maxlondiff = ($londiff > $maxlondiff) ? $londiff : $maxlondiff;
+					 $maxlatdiff = ($latdiff > $maxlatdiff) ? $latdiff : $maxlatdiff;
+					 }
+					 $bboxloncoords[] = $prevzero = $inatPlaceCoords[$k][0];
+					 $bboxlatcoords[] = $prevone = $inatPlaceCoords[$k][1];
+					 }
+					 $zoom = round( log(180/(max([$maxlondiff,$maxlatdiff]) / 4), 2) ) + 1;
+					 $xtilemax = floor(((max($bboxloncoords) + 180) / 360) * pow(2, $zoom));
+					 $xtilemin = floor(((min($bboxloncoords) + 180) / 360) * pow(2, $zoom));
+					 $ytilemax = floor((1 - log(tan(deg2rad(max($bboxlatcoords))) + 1 / cos(deg2rad(max($bboxlatcoords)))) / pi()) /2 * pow(2, $zoom));
+					 $ytilemin = floor((1 - log(tan(deg2rad(min($bboxlatcoords))) + 1 / cos(deg2rad(min($bboxlatcoords)))) / pi()) /2 * pow(2, $zoom));
+					 */
+					$dynpropArr['externalservicene'] = $maxlat.'|'.$maxlon;
+					$dynpropArr['externalservicesw'] = $minlat.'|'.$minlon;
+				}
+			}
+		}
+		return json_encode($dynpropArr);
 	}
 
 	//Polygon functions
@@ -101,10 +163,42 @@ class ChecklistAdmin extends Manager{
 		return $retStr;
 	}
 
+	/*
+	 * @return array | bool
+	 */
+	public function getFootprint() {
+		if(!$this->clid) return false;
+		$sql = <<<'SQL'
+		SELECT footprintWkt, footprintGeoJson FROM fmchecklists WHERE clid = ?;
+		SQL;
+
+		$rs = null;
+		try {
+			if($stmt = $this->conn->prepare($sql)){
+				$stmt->bind_param('i', $this->clid);
+				$stmt->execute();
+				if($rs = $stmt->get_result()){
+					$row = $rs->fetch_object();
+					$rs->free();
+					$stmt->close();
+					if($row->footprintGeoJson) {
+						return ["type" => "geoJson", "footprint" => $row->footprintGeoJson];
+					} else if($row->footprintWkt) {
+						return ["type" => "wkt", "footprint" => $row->footprintWkt];
+					}
+				}
+			}
+			return false;
+		} catch (Exception $e) {
+			error_log('ChecklistAdmin->getFootprint on clid ' . $this->clid . ' :' . $e->getMessage(), 0);
+			return false;
+		}
+	}
+
 	public function savePolygon($polygonStr){
 		$status = true;
 		if($this->clid){
-			$sql = 'UPDATE fmchecklists SET footprintwkt = '.($polygonStr?'"'.$this->cleanInStr($polygonStr).'"':'NULL').' WHERE (clid = '.$this->clid.')';
+			$sql = 'UPDATE fmchecklists SET footprintGeoJson = '.($polygonStr?'"'.$this->cleanInStr($polygonStr).'"':'NULL').' WHERE (clid = '.$this->clid.')';
 			if(!$this->conn->query($sql)){
 				echo 'ERROR saving polygon to checklist: '.$this->conn->error;
 				$status = false;
@@ -118,16 +212,17 @@ class ChecklistAdmin extends Manager{
 		$retArr = Array();
 		$targetStr = $this->clid;
 		do{
-			$sql = 'SELECT c.clid, c.name, child.clid as pclid '.
-				'FROM fmchklstchildren child INNER JOIN fmchecklists c ON child.clidchild = c.clid '.
-				'WHERE child.clid IN('.trim($targetStr,',').') '.
-				'ORDER BY c.name ';
+			$sql = 'SELECT c.clid, c.name, c.type, child.clid as pclid
+				FROM fmchklstchildren child INNER JOIN fmchecklists c ON child.clidchild = c.clid
+				WHERE child.clid IN(' . trim($targetStr, ',') . ') AND child.clid != child.clidchild
+				ORDER BY c.name ';
 			$rs = $this->conn->query($sql);
 			$targetStr = '';
 			while($r = $rs->fetch_object()){
 				$retArr[$r->clid]['name'] = $r->name;
+				$retArr[$r->clid]['type'] = $r->type;
 				$retArr[$r->clid]['pclid'] = $r->pclid;
-				$targetStr .= ','.$r->clid;
+				$targetStr .= ',' . $r->clid;
 			}
 			$rs->free();
 		}while($targetStr);
@@ -139,16 +234,16 @@ class ChecklistAdmin extends Manager{
 		$retArr = Array();
 		$targetStr = $this->clid;
 		do{
-			$sql = 'SELECT c.clid, c.name, child.clid as pclid '.
-				'FROM fmchklstchildren child INNER JOIN fmchecklists c ON child.clid = c.clid '.
-				'WHERE child.clidchild IN('.trim($targetStr,',').') ';
+			$sql = 'SELECT c.clid, c.name
+				FROM fmchklstchildren child INNER JOIN fmchecklists c ON child.clid = c.clid
+				WHERE child.clidchild IN(' . trim($targetStr, ',') . ') AND child.clid != child.clidchild';
 			$rs = $this->conn->query($sql);
 			$targetStr = '';
 			while($r = $rs->fetch_object()){
 				$retArr[$r->clid] = $r->name;
 				$targetStr .= ','.$r->clid;
 			}
-			if($targetStr) $targetStr = substr($targetStr,1);
+			if($targetStr) $targetStr = substr($targetStr, 1);
 			$rs->free();
 		}while($targetStr);
 		asort($retArr);
@@ -206,25 +301,34 @@ class ChecklistAdmin extends Manager{
 	}
 
 	//Point functions
-	public function addPoint($tid,$lat,$lng,$notes){
-		$status = '';
+	public function addPoint($tid, $lat, $lng, $notes){
+		$status = false;
 		if(is_numeric($tid) && is_numeric($lat) && is_numeric($lng)){
-			$sql = 'INSERT INTO fmchklstcoordinates(clid,tid,decimallatitude,decimallongitude,notes) VALUES('.$this->clid.','.$tid.','.$lat.','.$lng.',"'.$this->cleanInStr($notes).'")';
-			if(!$this->conn->query($sql)){
-				$this->errorMessage = 'ERROR: unable to add point. '.$this->conn->error;
+			$inputArr = array('tid' => $tid, 'decimalLatitude' => $lat, 'decimalLongitude' => $lng, 'notes' => $notes);
+			$inventoryManager = new ImInventories();
+			$inventoryManager->setClid($this->clid);
+			if($inventoryManager->insertChecklistCoordinates($inputArr)){
+				$status = true;
+			}
+			else{
+				$this->errorMessage = $inventoryManager->getErrorMessage();
 			}
 		}
 		return $status;
 	}
 
 	public function removePoint($pointPK){
-		$statusStr = '';
-		if($pointPK && is_numeric($pointPK)){
-			if(!$this->conn->query('DELETE FROM fmchklstcoordinates WHERE (chklstcoordid = '.$pointPK.')')){
-				$statusStr = 'ERROR: unable to remove point. '.$this->conn->error;
+		$status = false;
+		if(is_numeric($pointPK)){
+			$inventoryManager = new ImInventories();
+			if($inventoryManager->deleteChecklistCoordinates($pointPK)){
+				$status = true;
+			}
+			else{
+				$this->errorMessage = $inventoryManager->getErrorMessage();
 			}
 		}
-		return $statusStr;
+		return $status;
 	}
 
 	//Editor management
@@ -403,12 +507,9 @@ class ChecklistAdmin extends Manager{
 	public function getManagementLists($uid){
 		$returnArr = Array();
 		if(is_numeric($uid)){
-			//Get project and checklist IDs from userpermissions
 			$clStr = '';
 			$projStr = '';
 			$sql = 'SELECT role,tablepk FROM userroles WHERE (uid = '.$uid.') AND (role = "ClAdmin" OR role = "ProjAdmin") ';
-			//$sql = 'SELECT pname FROM userpermissions '.
-			//	'WHERE (uid = '.$uid.') AND (pname LIKE "ClAdmin-%" OR pname LIKE "ProjAdmin-%") ';
 			$rs = $this->conn->query($sql);
 			while($r = $rs->fetch_object()){
 				if($r->role == 'ClAdmin') $clStr .= ','.$r->tablepk;
@@ -437,96 +538,155 @@ class ChecklistAdmin extends Manager{
 		return $returnArr;
 	}
 
-	public function parseChecklist($tidNode, $taxa, $targetClid, $parentClid, $targetPid, $transferMethod, $copyAttributes){
-		$statusArr = false;
-		if(is_numeric($tidNode)){
-			$inventoryManager = new ImInventories();
-			$fieldArr = array();
-			$clMeta = $this->getMetaData();
-			if($copyAttributes){
-				$extraArr = array('authors','type','locality','publication','abstract','notes','latcentroid','longcentroid','pointradiusmeters','access','defaultsettings','dynamicsql','uid','type','sortsequence');
-				foreach($extraArr as $fieldName){
-					$fieldArr[$fieldName] = $clMeta[$fieldName];
+	public function parseChecklist($tidNode, $taxa, $targetClid, $parentClid, $targetPid, $copyTaxaToTarget, $copyAttributes){
+		$statusArr = array();
+		$inventoryManager = new ImInventories();
+		$fieldArr = array();
+		$clMeta = $this->getMetaData();
+		if($copyAttributes){
+			$extraArr = array('authors','type','locality','publication','abstract','notes','latcentroid','longcentroid','pointradiusmeters','access','defaultsettings','dynamicsql','uid','type','sortsequence');
+			foreach($extraArr as $fieldName){
+				$fieldArr[$fieldName] = $clMeta[$fieldName];
+			}
+		}
+		$clManagerArr = array();
+		if($copyAttributes) $clManagerArr = $inventoryManager->getManagers('ClAdmin', 'fmchecklists', $this->clid);
+		if(!array_key_exists($GLOBALS['SYMB_UID'], $clManagerArr)) $clManagerArr[$GLOBALS['SYMB_UID']] = '';
+		if(!$targetClid){
+			//Create a new checklist that will serve as target checklist
+			$fieldArr['name'] = $clMeta['name'] . ($taxa ? ' - ' . $taxa : '') . ' - Copy';
+			$inventoryManager->insertChecklist($fieldArr);
+			$targetClid = $inventoryManager->getPrimaryKey();
+			if($targetClid){
+				foreach($clManagerArr as $managerUid => $managerArr){
+					$inventoryManager->insertUserRole($managerUid, 'ClAdmin', 'fmchecklists', $targetClid, $GLOBALS['SYMB_UID']);
 				}
 			}
-			$clManagerArr = array();
-			if($copyAttributes) $clManagerArr = $inventoryManager->getManagers('ClAdmin', 'fmchecklists', $this->clid);
-			if(!array_key_exists($GLOBALS['SYMB_UID'], $clManagerArr)) $clManagerArr[$GLOBALS['SYMB_UID']] = '';
-			if(!$targetClid){
-				$fieldArr['name'] = $clMeta['name'].' new sub-checklist - '.$taxa;
-				$targetClid = $inventoryManager->insertChecklist($fieldArr);
-				if($targetClid && $copyAttributes){
-					foreach($clManagerArr as $managerUid => $managerArr){
-						$inventoryManager->insertUserRole($managerUid, 'ClAdmin', 'fmchecklists', $targetClid, $GLOBALS['SYMB_UID']);
+		}
+		if($targetClid && is_numeric($targetClid)){
+			$transerStatus = false;
+			if($copyTaxaToTarget){
+				$transerStatus = $this->copyTaxa($targetClid, $tidNode);
+			}
+			else{
+				$transerStatus = $this->transferTaxa($targetClid, $tidNode);
+			}
+			if($transerStatus){
+				$statusArr['targetClid'] = $targetClid;
+				if($targetPid === '0'){
+					$projectFieldArr = array(
+						'projname' => $clMeta['name'] . ' project',
+						'managers' => $clMeta['authors'],
+						'ispublic' => ($clMeta['access'] == 'private'?0:1));
+					$targetPid = $inventoryManager->insertProject($projectFieldArr);
+					if($targetPid){
+						foreach($clManagerArr as $managerUid => $managerArr){
+							$inventoryManager->insertUserRole($managerUid, 'ProjAdmin', 'fmprojects', $targetPid, $GLOBALS['SYMB_UID']);
+						}
 					}
 				}
-			}
-			if($targetClid && is_numeric($targetClid)){
-				if($this->transferTaxa($targetClid, $tidNode, $transferMethod)){
-					$statusArr['targetClid'] = $targetClid;
-					if($targetPid === '0'){
-						$projectFieldArr = array(
-							'projname' => $clMeta['name'].' project',
-							'managers' => $clMeta['authors'],
-							'ispublic' => ($clMeta['access'] == 'private'?0:1));
-						$targetPid = $inventoryManager->insertProject($projectFieldArr);
-						if($targetPid && $copyAttributes){
-							foreach($clManagerArr as $managerUid => $managerArr){
-								$inventoryManager->insertUserRole($managerUid, 'ProjAdmin', 'fmprojects', $targetPid, $GLOBALS['SYMB_UID']);
-							}
+				if($targetPid && is_numeric($targetPid)){
+					$inventoryManager->setPid($targetPid);
+					$inventoryManager->insertChecklistProjectLink($targetClid);
+					$statusArr['targetPid'] = $targetPid;
+				}
+				if($parentClid === '0'){
+					//Create a new parent checklist
+					$fieldArr['name'] = 'Parent: ' . $clMeta['name'];
+					$inventoryManager->insertChecklist($fieldArr);
+					$parentClid = $inventoryManager->getPrimaryKey();
+					if($parentClid){
+						foreach($clManagerArr as $managerUid => $managerArr){
+							$inventoryManager->insertUserRole($managerUid, 'ClAdmin', 'fmchecklists', $parentClid, $GLOBALS['SYMB_UID']);
 						}
 					}
 					if($targetPid && is_numeric($targetPid)){
-						$inventoryManager->setPid($targetPid);
-						$inventoryManager->insertChecklistProjectLink($targetClid);
-						$statusArr['targetPid'] = $targetPid;
-					}
-					if($parentClid === '0'){
-						$fieldArr['name'] = $clMeta['name'].' parent checklist';
-						$parentClid = $inventoryManager->insertChecklist($fieldArr);
-						if($parentClid && $copyAttributes){
-							foreach($clManagerArr as $managerUid => $managerArr){
-								$inventoryManager->insertUserRole($managerUid, 'ClAdmin', 'fmchecklists', $parentClid, $GLOBALS['SYMB_UID']);
-							}
-						}
-					}
-					if($parentClid && is_numeric($parentClid)){
-						$inventoryManager->setClid($parentClid);
-						$inventoryManager->insertChildChecklist($targetClid, $GLOBALS['SYMB_UID']);
-						if($targetPid && is_numeric($targetPid)){
-							$inventoryManager->insertChecklistProjectLink($parentClid);
-						}
-						$statusArr['parentClid'] = $parentClid;
+						//Link new parent checklist to target project
+						$inventoryManager->insertChecklistProjectLink($parentClid);
 					}
 				}
-				if($copyAttributes  ){
-					$newPManager = new ProfileManager();
-					$newPManager->setUserName($GLOBALS['USERNAME']);
-					$newPManager->authenticate();
+				if($parentClid && is_numeric($parentClid)){
+					$inventoryManager->setClid($parentClid);
+					$inventoryManager->insertChildChecklist($targetClid, $GLOBALS['SYMB_UID']);
+					$statusArr['parentClid'] = $parentClid;
 				}
 			}
+			$newPManager = new ProfileManager();
+			$newPManager->setUserName($GLOBALS['USERNAME']);
+			$newPManager->authenticate();
 		}
 		return $statusArr;
 	}
 
-	private function transferTaxa($targetClid, $tidNode, $transferMethod){
-		$status = true;
-		if($tidNode && is_numeric($tidNode)){
-			$sql = 'UPDATE fmchklsttaxalink c INNER JOIN taxa t ON c.tid = t.tid
-				INNER JOIN taxaenumtree e ON c.tid = e.tid
-				SET c.clid = '.$targetClid.'
-				WHERE e.taxauthid = 1 AND c.clid = '.$this->clid.' AND e.parenttid = '.$tidNode;
-			if($transferMethod){
-				$sql = 'INSERT INTO fmchklsttaxalink(tid, clid, morphoSpecies, familyOverride, habitat, abundance, notes, explicitExclude, source, nativity, endemic, invasive, internalnotes, dynamicProperties)
-					SELECT c.tid, '.$targetClid.', c.morphoSpecies, c.familyOverride, c.habitat, c.abundance, c.notes, c.explicitExclude, c.source,
-					c.nativity, c.endemic, c.invasive, c.internalnotes, c.dynamicProperties
-					FROM fmchklsttaxalink c INNER JOIN taxa t ON c.tid = t.tid
-					INNER JOIN taxaenumtree e ON c.tid = e.tid
-					WHERE e.taxauthid = 1 AND c.clid = '.$this->clid.' AND e.parenttid = '.$tidNode;
+	private function transferTaxa($targetClid, $tidNode){
+		$status = false;
+		$sql = 'UPDATE IGNORE fmchklsttaxalink SET clid = ? WHERE clid = ?';
+		$typeStr = 'ii';
+		$paramArr = array($targetClid, $this->clid);
+		if($tidNode){
+			$sql = 'UPDATE IGNORE fmchklsttaxalink c INNER JOIN taxaenumtree e ON c.tid = e.tid
+				SET c.clid = ?
+				WHERE e.taxauthid = 1 AND c.clid = ? AND e.parenttid = ?';
+			$typeStr = 'iii';
+			$paramArr[] = $tidNode;
+		}
+		if($stmt = $this->conn->prepare($sql)){
+			$stmt->bind_param($typeStr, ...$paramArr);
+			if($stmt->execute()){
+				$status = true;
 			}
-			if(!$this->conn->query($sql)){
-				$this->errorMessage = 'ERROR transferring taxa to checklist: '.$this->conn->error;
-				$status = false;
+			else{
+				$this->errorMessage = $stmt->error;
+			}
+			$stmt->close();
+		}
+		return $status;
+	}
+
+	private function copyTaxa($targetClid, $tidNode){
+		$status = false;
+		$sql = 'INSERT IGNORE INTO fmchklsttaxalink(tid, clid, morphoSpecies, familyOverride, habitat, abundance, notes, explicitExclude, source, nativity, endemic, invasive, internalnotes, dynamicProperties)
+			SELECT tid, ?, morphoSpecies, familyOverride, habitat, abundance, notes, explicitExclude, source, nativity, endemic, invasive, internalnotes, dynamicProperties
+			FROM fmchklsttaxalink
+			WHERE clid = ? ';
+		$typeStr = 'ii';
+		$paramArr = array($targetClid, $this->clid);
+		if($tidNode){
+			$sql = 'INSERT IGNORE INTO fmchklsttaxalink(tid, clid, morphoSpecies, familyOverride, habitat, abundance, notes, explicitExclude, source, nativity, endemic, invasive, internalnotes, dynamicProperties)
+				SELECT c.tid, ?, c.morphoSpecies, c.familyOverride, c.habitat, c.abundance, c.notes, c.explicitExclude, c.source, c.nativity, c.endemic, c.invasive, c.internalnotes, c.dynamicProperties
+				FROM fmchklsttaxalink c INNER JOIN taxa t ON c.tid = t.tid
+				INNER JOIN taxaenumtree e ON c.tid = e.tid
+				WHERE e.taxauthid = 1 AND c.clid = ? AND e.parenttid = ?';
+			$typeStr = 'iii';
+			$paramArr[] = $tidNode;
+		}
+		if($stmt = $this->conn->prepare($sql)){
+			$stmt->bind_param($typeStr, ...$paramArr);
+			if($stmt->execute()){
+				$status = true;
+			}
+			else{
+				$this->errorMessage = $stmt->error;
+			}
+			$stmt->close();
+		}
+
+		if($status){
+			//Copy voucher links to new checklist (vouchers are automatcially included with transfers, thus no extra action needed)
+			$sql = 'INSERT IGNORE INTO fmvouchers(clTaxaID, occid, notes)
+				SELECT t.clTaxaID, v.occid, v.notes
+				FROM fmchklsttaxalink c INNER JOIN fmvouchers v ON c.clTaxaID = v.clTaxaID
+				INNER JOIN fmchklsttaxalink t ON c.tid = t.tid
+				WHERE c.clid = ? AND t.clid = ?';
+			if($stmt = $this->conn->prepare($sql)){
+				$stmt->bind_param('ii', $this->clid, $targetClid);
+				if($stmt->execute()){
+					$status = true;
+				}
+				else{
+					$this->errorMessage = $stmt->error;
+				}
+				$stmt->close();
 			}
 		}
 		return $status;
@@ -539,6 +699,24 @@ class ChecklistAdmin extends Manager{
 
 	public function getClName(){
 		return $this->clName;
+	}
+
+	//Misc support functions
+	public function cleanOutArray($inputArray){
+		$skip = array('defaultsettings', 'dynamicsql', 'footprintwkt');
+		if(is_array($inputArray)){
+			foreach($inputArray as $key => $value){
+				if(is_array($value)){
+					$inputArray[$key] = $this->cleanOutArray($value);
+				}
+				else{
+					if(!in_array($key, $skip)){
+						$inputArray[$key] = $this->cleanOutStr($value);
+					}
+				}
+			}
+		}
+		return $inputArray;
 	}
 }
 ?>

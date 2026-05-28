@@ -1,5 +1,6 @@
 <?php
-include_once($SERVER_ROOT.'/classes/OccurrenceTaxaManager.php');
+include_once($SERVER_ROOT . '/classes/OccurrenceTaxaManager.php');
+include_once($SERVER_ROOT . '/classes/utilities/OccurrenceUtil.php');
 
 class ImageLibraryBrowser extends OccurrenceTaxaManager{
 
@@ -30,10 +31,10 @@ class ImageLibraryBrowser extends OccurrenceTaxaManager{
 		return $returnArray;
 	}
 
-	public function getGenusList($taxon = ''){
+	public function getGenusList(){
 		$retArr = array();
 		$sql = 'SELECT DISTINCT t.UnitName1 '.$this->getListSql().' ';
-		if($taxon) $sql .= 'AND (ts.Family = "'.$this->cleanInStr($taxon).'") ';
+		if($this->searchTerm) $sql .= 'AND (ts.Family = "'.$this->cleanInputStr($this->searchTerm).'") ';
 		$rs = $this->conn->query($sql);
 		while($r = $rs->fetch_object()){
 			$retArr[] = $r->UnitName1;
@@ -43,10 +44,11 @@ class ImageLibraryBrowser extends OccurrenceTaxaManager{
 		return $retArr;
 	}
 
-	public function getSpeciesList($taxon = ''){
+	public function getSpeciesList(){
 		$retArr = Array();
 		$tidArr = Array();
-		$taxon = $this->cleanInStr(trim($taxon,' %'));
+		$taxon = $this->cleanInputStr($this->searchTerm);
+		$taxon = trim($taxon,' %');
 		if($taxon){
 			$this->setTaxonRequestVariable(array('taxa'=>$taxon,'usethes'=>1,'taxontype'=>2));
 			foreach($this->taxaArr['taxa'] as $taxName => $taxArr){
@@ -55,7 +57,7 @@ class ImageLibraryBrowser extends OccurrenceTaxaManager{
 			}
 		}
 		if(!$taxon) $taxon = 'A';
-		$sql = 'SELECT DISTINCT t.tid, t.SciName '.$this->getListSql().' AND (i.sortsequence < 500) ';
+		$sql = 'SELECT DISTINCT t.tid, t.SciName '.$this->getListSql().' AND (m.sortsequence < 500) ';
 		if(strtolower(substr($taxon,-5)) == 'aceae' || strtolower(substr($taxon,-4)) == 'idae') $sql .= 'AND ((ts.family = "'.$taxon.'") ';
 		else{
 			$sql .= 'AND ((t.SciName LIKE "'.$taxon.'%") ';
@@ -72,8 +74,8 @@ class ImageLibraryBrowser extends OccurrenceTaxaManager{
 	}
 
 	private function getListSql(){
-		$sql = 'FROM images i INNER JOIN taxstatus ts ON i.tid = ts.tid INNER JOIN taxa t ON ts.tidaccepted = t.tid ';
-		if($this->tidFocus) $sql .= 'INNER JOIN taxaenumtree e ON i.tid = e.tid ';
+		$sql = 'FROM media m INNER JOIN taxstatus ts ON m.tid = ts.tid INNER JOIN taxa t ON ts.tidaccepted = t.tid ';
+		if($this->tidFocus) $sql .= 'INNER JOIN taxaenumtree e ON m.tid = e.tid ';
 		$sql .= 'WHERE (ts.taxauthid = 1) AND (t.RankId > 219) ';
 		if($this->tidFocus) $sql .= 'AND (e.parenttid IN('.$this->tidFocus.')) AND (e.taxauthid = 1) ';
 		return $sql;
@@ -93,8 +95,14 @@ class ImageLibraryBrowser extends OccurrenceTaxaManager{
 			}
 			$rs->free();
 			//Get image counts
-			$sql = 'SELECT o.collid, COUNT(i.imgid) AS imgcnt FROM images i INNER JOIN omoccurrences o ON i.occid = o.occid ';
-			if($this->tidFocus) $sql .= 'INNER JOIN taxaenumtree e ON i.tid = e.tid WHERE (e.parenttid IN('.$this->tidFocus.')) AND (e.taxauthid = 1) ';
+			$sql = 'SELECT o.collid, COUNT(m.mediaID) AS imgcnt FROM media m INNER JOIN omoccurrences o ON m.occid = o.occid ';
+			if($this->tidFocus){
+				$sql .= 'INNER JOIN taxaenumtree e ON m.tid = e.tid WHERE (e.parenttid IN('.$this->tidFocus.')) AND (e.taxauthid = 1) ';
+				$sql .= OccurrenceUtil::appendFullProtectionSQL();
+			}
+			else{
+				$sql .= 'WHERE ' . substr(OccurrenceUtil::appendFullProtectionSQL(), 3);
+			}
 			$sql .= 'GROUP BY o.collid ';
 			$result = $this->conn->query($sql);
 			while($row = $result->fetch_object()){
@@ -129,11 +137,11 @@ class ImageLibraryBrowser extends OccurrenceTaxaManager{
 		return $retArr;
 	}
 
-	public function getPhotographerList(){
+	public function getCreatorList(){
 		$retArr = array();
-		$sql = 'SELECT u.uid, CONCAT_WS(", ", u.lastname, u.firstname) as pname, CONCAT_WS(", ", u.firstname, u.lastname) as fullname, u.email, Count(ti.imgid) AS imgcnt '.
-			'FROM users u INNER JOIN images ti ON u.uid = ti.photographeruid ';
-		if($this->tidFocus) $sql .= 'INNER JOIN taxaenumtree e ON ti.tid = e.tid WHERE (e.parenttid IN('.$this->tidFocus.')) AND (e.taxauthid = 1) ';
+		$sql = 'SELECT u.uid, CONCAT_WS(", ", u.lastname, u.firstname) as pname, CONCAT_WS(", ", u.firstname, u.lastname) as fullname, u.email, Count(m.mediaID) AS imgcnt '.
+			'FROM users u INNER JOIN media m ON u.uid = m.creatorUid ';
+		if($this->tidFocus) $sql .= 'INNER JOIN taxaenumtree e ON m.tid = e.tid WHERE (e.parenttid IN('.$this->tidFocus.')) AND (e.taxauthid = 1) ';
 		$sql .= 'GROUP BY u.uid ORDER BY u.lastname, u.firstname';
 		$result = $this->conn->query($sql);
 		while($row = $result->fetch_object()){
@@ -147,7 +155,7 @@ class ImageLibraryBrowser extends OccurrenceTaxaManager{
 
 	//Setters and getters
 	public function setSearchTerm($t){
-		$this->searchTerm = filter_var($t, FILTER_SANITIZE_STRING);
+		$this->searchTerm = htmlspecialchars($t, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE);
 	}
 }
 ?>

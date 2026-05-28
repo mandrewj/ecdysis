@@ -1,7 +1,10 @@
 <?php
 include_once('../config/symbini.php');
 include_once($SERVER_ROOT.'/classes/ProfileManager.php');
-@include_once($SERVER_ROOT.'/content/lang/profile/specimenstoid.'.$LANG_TAG.'.php');
+include_once($SERVER_ROOT . '/classes/utilities/Language.php');
+
+Language::load('profile/specimenstoid');
+
 header("Content-Type: text/html; charset=".$CHARSET);
 
 $userId = $_REQUEST['userid'];
@@ -26,10 +29,10 @@ $profileHandler->setUid($SYMB_UID);
 		<?php
 		if($userId){
 			if($action == 'showmissingids'){
-				echo '<a href="viewprofile.php?tabindex=2&userid='.$userId.'"><b>'.(isset($LANG['DISPLAY_SPECS'])?$LANG['DISPLAY_SPECS']:'Display Specimens within your Taxonomic Scope').'</b></a>';
+				echo '<a href="viewprofile.php?tabindex=2&userid=' . htmlspecialchars($userId, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '"><b>' . htmlspecialchars((isset($LANG['DISPLAY_SPECS'])?$LANG['DISPLAY_SPECS']:'Display Specimens within your Taxonomic Scope'), ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '</b></a>';
 			}
 			else{
-				echo '<a href="viewprofile.php?action=showmissingids&tabindex=2&userid='.$userId.'"><b>'.(isset($LANG['ORDER'])?$LANG['ORDER']:'Order Level or Above (open to all identification editors)').'</b></a>';
+				echo '<a href="viewprofile.php?action=showmissingids&tabindex=2&userid=' . htmlspecialchars($userId, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '"><b>' . htmlspecialchars((isset($LANG['ORDER'])?$LANG['ORDER']:'Order Level or Above (open to all identification editors)'), ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '</b></a>';
 			}
 		}
 		?>

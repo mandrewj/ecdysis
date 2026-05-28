@@ -55,7 +55,7 @@ class OccurrenceMaintenance {
 		//Update NULL image tids with non-NULL occurrence tids
 		$occidArr = array();
 		$this->outputMsg('Updating and indexing occurrence images... ',1);
-		$sql = 'SELECT o.occid FROM omoccurrences o INNER JOIN images i ON o.occid = i.occid WHERE (i.tid IS NULL) AND (o.tidinterpreted IS NOT NULL) ';
+		$sql = 'SELECT o.occid FROM omoccurrences o INNER JOIN media m ON o.occid = m.occid WHERE (m.tid IS NULL) AND (o.tidinterpreted IS NOT NULL) ';
 		if($this->collidStr) $sql .= 'AND o.collid IN('.$this->collidStr.')';
 		$rs = $this->conn->query($sql);
 		while($r = $rs->fetch_object()){
@@ -103,12 +103,120 @@ class OccurrenceMaintenance {
 		}
 		$rs->free();
 		if(isset($occidArr)) $this->batchUpdateAuthor($occidArr);
+		unset($occidArr);
+
+		//Update date fields - first look for bad year
+		$occidArr = array();
+		$this->outputMsg('Updating individual date fields (e.g. day, month, year, startDayOfYear, endDayOfYear)... ',1);
+		$sql = 'SELECT occid FROM omoccurrences WHERE eventDate BETWEEN "1500-01-01" AND CURDATE() AND (year IS NULL OR year != YEAR(eventDate)) ';
+		if($this->collidStr) $sql .= 'AND collid IN('.$this->collidStr.')';
+		$rs = $this->conn->query($sql);
+		while($r = $rs->fetch_object()){
+			$occidArr[] = $r->occid;
+			if(count($occidArr) > 1000){
+				$this->batchUpdateDateFields($occidArr);
+				unset($occidArr);
+			}
+		}
+		$rs->free();
+		if(isset($occidArr)) $this->batchUpdateDateFields($occidArr);
+		unset($occidArr);
+
+		//Then look for records with bad month
+		$occidArr = array();
+		$sql = 'SELECT occid FROM omoccurrences WHERE eventDate BETWEEN "1500-01-01" AND CURDATE() AND (month IS NULL OR month != MONTH(eventDate)) ';
+		if($this->collidStr) $sql .= 'AND collid IN('.$this->collidStr.')';
+		$rs = $this->conn->query($sql);
+		while($r = $rs->fetch_object()){
+			$occidArr[] = $r->occid;
+			if(count($occidArr) > 1000){
+				$this->batchUpdateDateFields($occidArr);
+				unset($occidArr);
+			}
+		}
+		$rs->free();
+		if(isset($occidArr)) $this->batchUpdateDateFields($occidArr);
+		unset($occidArr);
+
+		//Then look for records with bad day
+		$occidArr = array();
+		$sql = 'SELECT occid FROM omoccurrences WHERE eventDate BETWEEN "1500-01-01" AND CURDATE() AND (day IS NULL OR day != DAY(eventDate)) ';
+		if($this->collidStr) $sql .= 'AND collid IN('.$this->collidStr.')';
+		$rs = $this->conn->query($sql);
+		while($r = $rs->fetch_object()){
+			$occidArr[] = $r->occid;
+			if(count($occidArr) > 1000){
+				$this->batchUpdateDateFields($occidArr);
+				unset($occidArr);
+			}
+		}
+		$rs->free();
+		if(isset($occidArr)) $this->batchUpdateDateFields($occidArr);
+		unset($occidArr);
+
+		//Batch populate Geography data
+		$this->outputMsg('Populating null country codes... ', 1);
+		$this->updateGeographicThesaurus();
+
+		//Set NULL or incorrectly set country codes
+		$geoArr = array();
+		$sql = 'SELECT o.occid, g.iso2
+			FROM omoccurrences o INNER JOIN geographicthesaurus g ON o.country = g.geoterm
+			WHERE (g.geolevel = 50) AND (o.countryCode IS NULL OR o.countryCode != g.iso2) ';
+		//if($this->collidStr) $sql .= 'AND collid IN('.$this->collidStr.')';
+		$rs = $this->conn->query($sql);
+		$cnt = 0;
+		while($r = $rs->fetch_object()){
+			$geoArr[$r->iso2][] = $r->occid;
+			if($cnt > 5000){
+				$this->batchUpdateCountyCode($geoArr);
+				unset($geoArr);
+				$cnt = 0;
+			}
+			$cnt++;
+		}
+		$rs->free();
+		if(!empty($geoArr)) $this->batchUpdateCountyCode($geoArr);
+		unset($geoArr);
+
+		//Batch populate NULL or incorrect continent values
+		$this->outputMsg('Populating null continent values... ', 1);
+		$geoArr = array();
+		$sql = 'SELECT o.occid, p.geoTerm
+			FROM omoccurrences o INNER JOIN geographicthesaurus g ON o.countryCode = g.iso2
+			INNER JOIN geographicthesaurus p ON g.parentID = p.geoThesID
+			WHERE (o.continent IS NULL OR o.continent != p.geoTerm) AND g.geoLevel = 50 AND g.acceptedID IS NULL';
+		//if($this->collidStr) $sql .= 'AND collid IN('.$this->collidStr.')';
+		$rs = $this->conn->query($sql);
+		$cnt = 0;
+		while($r = $rs->fetch_object()){
+			$geoArr[$r->geoTerm][] = $r->occid;
+			if($cnt > 5000){
+				$this->batchUpdateContinent($geoArr);
+				unset($geoArr);
+				$cnt = 0;
+			}
+			$cnt++;
+		}
+		$rs->free();
+		if(!empty($geoArr)) $this->batchUpdateContinent($geoArr);
+		unset($geoArr);
+
+		//Batch convert state abbreviations to full state names
+		$this->outputMsg('Converting State abbreviation to full names... ', 1);
+		$sql = 'UPDATE geographicthesaurus g INNER JOIN omoccurrences o ON g.abbreviation = o.stateProvince
+			INNER JOIN geographicthesaurus p ON g.parentID = p.geoThesID
+			SET o.stateProvince = g.geoterm
+			WHERE p.geoterm = "United States" AND length(o.stateProvince) = 2';
+		if(!$this->conn->query($sql)){
+			$this->outputMsg('ERROR: ' . $this->error, 2);
+		}
 
 		return $status;
 	}
 
 	public function indexOccurrencesToTaxa(){
-		$this->outputMsg('Indexing validated scientific names (e.g. populating tidInterpreted)... ', 1);
+		$this->outputMsg('Indexing scientific names (e.g. populating tidInterpreted)... ', 1);
 
 		//Avoid using straight UPDATE SQL since they will often lock omoccurrences table for a significant amount of time when database is large
 		$occidArr = array();
@@ -118,7 +226,7 @@ class OccurrenceMaintenance {
 			FROM omoccurrences o INNER JOIN taxa t ON o.sciname = t.sciname AND o.scientificnameauthorship = t.author
 			WHERE (o.TidInterpreted IS NULL) ';
 		if($this->collidStr) $sql .= 'AND o.collid IN('.$this->collidStr.') ';
-		$sql .= 'ORDER BY t.tid';
+		//$sql .= 'ORDER BY t.tid';
 		$rs = $this->conn->query($sql);
 		while($r = $rs->fetch_object()){
 			if($occidArr && $r->tid != $activeTid) $this->batchUpdateTidInterpreted($occidArr);
@@ -136,7 +244,7 @@ class OccurrenceMaintenance {
 			INNER JOIN taxa t2 ON e.parenttid = t2.tid
 			WHERE (o.TidInterpreted IS NULL) AND (t2.rankid = 140) AND (t2.sciname = o.family) ';
 		if($this->collidStr) $sql .= 'AND o.collid IN('.$this->collidStr.') ';
-		$sql .= 'ORDER BY t.tid';
+		//$sql .= 'ORDER BY t.tid';
 		$rs = $this->conn->query($sql);
 		while($r = $rs->fetch_object()){
 			if($occidArr && $r->tid != $activeTid) $this->batchUpdateTidInterpreted($occidArr);
@@ -150,7 +258,7 @@ class OccurrenceMaintenance {
 		$activeTid = 0;
 		$sql = 'SELECT t.tid, o.occid FROM omoccurrences o INNER JOIN taxa t ON o.sciname = t.sciname WHERE o.TidInterpreted IS NULL ';
 		if($this->collidStr) $sql .= 'AND o.collid IN('.$this->collidStr.') ';
-		$sql .= 'ORDER BY t.tid';
+		//$sql .= 'ORDER BY t.tid';
 		$rs = $this->conn->query($sql);
 		while($r = $rs->fetch_object()){
 			if($occidArr && $r->tid != $activeTid) $this->batchUpdateTidInterpreted($occidArr);
@@ -166,7 +274,7 @@ class OccurrenceMaintenance {
 			FROM omoccurrences o INNER JOIN taxa t ON CONCAT(SUBSTRING_INDEX(o.sciname, " (", 1), " ", SUBSTRING_INDEX(o.sciname, ") ", -1)) = t.sciname
 			WHERE o.tidinterpreted IS NULL AND o.sciname LIKE "% (%) %" ';
 		if($this->collidStr) $sql .= 'AND o.collid IN('.$this->collidStr.') ';
-		$sql .= 'ORDER BY t.tid';
+		//$sql .= 'ORDER BY t.tid';
 		$rs = $this->conn->query($sql);
 		while($r = $rs->fetch_object()){
 			if($occidArr && $r->tid != $activeTid) $this->batchUpdateTidInterpreted($occidArr);
@@ -175,6 +283,24 @@ class OccurrenceMaintenance {
 		}
 		$rs->free();
 		$this->batchUpdateTidInterpreted($occidArr);
+
+		//Match hybrids
+		/* Not activating due to taking too long to run on big datasets
+		$activeTid = 0;
+		$sql = 'SELECT t.tid, o.occid
+			FROM taxa t INNER JOIN omoccurrences o ON t.sciname LIKE REPLACE(o.sciname, "× ", "%×%")
+			WHERE o.tidinterpreted IS NULL AND o.sciname LIKE "%× %" ';
+		if($this->collidStr) $sql .= 'AND o.collid IN('.$this->collidStr.') ';
+		//$sql .= 'ORDER BY t.tid';
+		$rs = $this->conn->query($sql);
+		while($r = $rs->fetch_object()){
+			if($occidArr && $r->tid != $activeTid) $this->batchUpdateTidInterpreted($occidArr);
+			$activeTid = $r->tid;
+			$occidArr[$r->tid][] = $r->occid;
+		}
+		$rs->free();
+		$this->batchUpdateTidInterpreted($occidArr);
+		*/
 	}
 
 	private function batchUpdateTidInterpreted(&$occidArr){
@@ -197,7 +323,7 @@ class OccurrenceMaintenance {
 	private function batchUpdateImageTid($occidArr){
 		$status = false;
 		if($occidArr){
-			$sql = 'UPDATE omoccurrences o INNER JOIN images i ON o.occid = i.occid SET i.tid = o.tidinterpreted WHERE o.occid IN('.implode(',',$occidArr).')';
+			$sql = 'UPDATE omoccurrences o INNER JOIN media m ON o.occid = m.occid SET m.tid = o.tidinterpreted WHERE o.occid IN('.implode(',',$occidArr).')';
 			if($this->conn->query($sql)){
 				$status = true;
 			}
@@ -258,6 +384,67 @@ class OccurrenceMaintenance {
 		return $status;
 	}
 
+	private function batchUpdateDateFields($occidArr){
+		$status = false;
+		if($occidArr){
+			//Update all date fields, no matter which date field was tested as bad
+			$sql = 'UPDATE omoccurrences
+				SET year = YEAR(eventDate), month = MONTH(eventDate), day = day(eventDate), startDayOfYear = DAYOFYEAR(eventDate), endDayOfYear = DAYOFYEAR(IFNULL(eventDate2,eventDate))
+				WHERE occid IN(' . implode(',', $occidArr) . ')';
+			if($this->conn->query($sql)){
+				$status = true;
+			}
+			else{
+				$this->errorArr[] = 'WARNING: unable to update date fields; '.$this->conn->error;
+				$this->outputMsg($this->errorArr,2);
+				$status = false;
+			}
+		}
+		return $status;
+	}
+
+	private function batchUpdateCountyCode($geoArr){
+		$status = false;
+		foreach($geoArr as $countryCode => $occidArr){
+			$sql = 'UPDATE omoccurrences SET countryCode = "' . $countryCode . '" WHERE occid IN(' . implode(',', $occidArr) . ')';
+			if($this->conn->query($sql)){
+				$status = true;
+			}
+			else{
+				$this->errorArr[] = 'WARNING: unable to update countryCode; '.$this->conn->error;
+				$this->outputMsg($this->errorArr,2);
+				$status = false;
+			}
+		}
+		return $status;
+	}
+
+	private function updateGeographicThesaurus(){
+		$status = false;
+		//Make sure that non-accepted country terms have the correct countryCode
+		$sql = 'UPDATE geographicthesaurus g INNER JOIN geographicthesaurus a ON g.acceptedID = a.geoThesID SET g.iso2 = a.iso2	WHERE g.iso2 IS NULL AND a.iso2 IS NOT NULL';
+		if($this->conn->query($sql)){
+			$status = true;
+		}
+		return $status;
+	}
+
+	private function batchUpdateContinent($geoArr){
+		$status = false;
+		foreach($geoArr as $continent => $occidArr){
+			$sql = 'UPDATE omoccurrences SET continent = "' . $continent . '" WHERE occid IN(' . implode(',', $occidArr) . ')';
+			if($this->conn->query($sql)){
+				$status = true;
+			}
+			else{
+				$this->errorArr[] = 'WARNING: unable to update continent; '.$this->conn->error;
+				$this->outputMsg($this->errorArr,2);
+				$status = false;
+			}
+		}
+		return $status;
+	}
+
 	public function batchUpdateGeoreferenceIndex(){
 		$status = false;
 		$this->outputMsg('Updating georeference index... ',1);
@@ -292,11 +479,14 @@ class OccurrenceMaintenance {
 		$this->outputMsg('Protecting globally rare species... ',1);
 		//Only protect names on list and synonym of accepted names
 		$sensitiveArr = $this->getSensitiveTaxa();
+		$shouldProtectCultivated = $GLOBALS['SHOULD_PROTECT_CULTIVATED'] ?? false;
+		$cultivationClause = $shouldProtectCultivated ? '' : 'AND (cultivationStatus = 0 OR cultivationStatus IS NULL)';
 
 		if($sensitiveArr){
-			$sql = 'UPDATE omoccurrences '.
-				'SET LocalitySecurity = 1 '.
-				'WHERE (LocalitySecurity IS NULL OR LocalitySecurity = 0) AND (localitySecurityReason IS NULL) AND (tidinterpreted IN('.implode(',',$sensitiveArr).')) ';
+			$sql = 'UPDATE omoccurrences
+				SET recordSecurity = 1
+				WHERE (recordSecurity = 0) AND (securityReason IS NULL)
+				'.$cultivationClause.' AND (tidinterpreted IN(' . implode(',', $sensitiveArr) . ')) ';
 			if($this->collidStr) $sql .= 'AND collid IN('.$this->collidStr.')';
 			if($this->conn->query($sql)){
 				$status += $this->conn->affected_rows;
@@ -345,13 +535,13 @@ class OccurrenceMaintenance {
 		return $status;
 	}
 
-	public function protectStateRareSpecies($clid,$locality){
+	public function protectStateRareSpecies($clid, $locality){
 		$status = 0;
 		$occArr = array();
 		$sql = 'SELECT o.occid FROM omoccurrences o INNER JOIN taxstatus ts1 ON o.tidinterpreted = ts1.tid '.
 			'INNER JOIN taxstatus ts2 ON ts1.tidaccepted = ts2.tidaccepted '.
 			'INNER JOIN fmchklsttaxalink cl ON  ts2.tid = cl.tid '.
-			'WHERE (o.localitysecurity IS NULL OR o.localitysecurity = 0) AND (o.localitySecurityReason IS NULL) '.
+			'WHERE (o.recordsecurity = 0) AND (o.securityReason IS NULL) AND (o.cultivationStatus = 0 OR o.cultivationStatus IS NULL) '.
 			'AND (o.stateprovince = "'.$locality.'") AND (cl.clid = '.$clid.') AND (ts1.taxauthid = 1) AND (ts2.taxauthid = 1) ';
 		$rs = $this->conn->query($sql);
 		while($r = $rs->fetch_object()){
@@ -360,7 +550,7 @@ class OccurrenceMaintenance {
 		$rs->free();
 
 		if($occArr){
-			$sql2 = 'UPDATE omoccurrences SET localitysecurity = 1 WHERE occid IN('.implode(',',$occArr).')';
+			$sql2 = 'UPDATE omoccurrences SET recordSecurity = 1 WHERE occid IN('.implode(',',$occArr).')';
 			if($this->conn->query($sql2)){
 				$status = $this->conn->affected_rows;
 			}
@@ -381,7 +571,7 @@ class OccurrenceMaintenance {
 				'FROM omoccurrences o INNER JOIN taxstatus ts1 ON o.tidinterpreted = ts1.tid '.
 				'INNER JOIN taxstatus ts2 ON ts1.tidaccepted = ts2.tidaccepted '.
 				'INNER JOIN fmchklsttaxalink cl ON  ts2.tid = cl.tid '.
-				'WHERE (o.localitysecurity IS NULL OR o.localitysecurity = 0) AND (o.localitySecurityReason IS NULL) '.
+				'WHERE (o.recordsecurity = 0) AND (o.securityReason IS NULL) AND (o.cultivationStatus = 0 OR o.cultivationStatus IS NULL) '.
 				'AND (o.stateprovince = "'.$state.'") AND (cl.clid = '.$clid.') AND (ts1.taxauthid = 1) AND (ts2.taxauthid = 1) ';
 			$rs = $this->conn->query($sql);
 			if($r = $rs->fetch_object()){
@@ -414,8 +604,8 @@ class OccurrenceMaintenance {
 					$rs->free();
 
 					$this->outputMsg('Calculating number of specimens imaged... ', 1);
-					$sql = 'SELECT count(DISTINCT o.occid) as imgspeccnt, count(DISTINCT i.imgid) AS imgcnt
-						FROM omoccurrences o INNER JOIN images i ON o.occid = i.occid
+					$sql = 'SELECT count(DISTINCT o.occid) as imgspeccnt, count(DISTINCT m.mediaID) AS imgcnt
+						FROM omoccurrences o INNER JOIN media m ON o.occid = m.occid
 						WHERE o.collid = '.$collid;
 					$rs = $this->conn->query($sql);
 					if($r = $rs->fetch_object()){
@@ -453,8 +643,8 @@ class OccurrenceMaintenance {
 						WHERE o.collid = '.$collid.' GROUP BY o.family ';
 					$rs = $this->conn->query($sql);
 					while($r = $rs->fetch_object()){
-						$family = str_replace(array('"',"'"),"",$r->family);
-						if($family){
+						if($r->family){
+							$family = str_replace(array('"', "'"), '', $r->family);
 							$statsArr['families'][$family]['SpecimensPerFamily'] = $r->SpecimensPerFamily;
 							$statsArr['families'][$family]['GeorefSpecimensPerFamily'] = $r->GeorefSpecimensPerFamily;
 							$statsArr['families'][$family]['IDSpecimensPerFamily'] = $r->IDSpecimensPerFamily;
@@ -471,8 +661,8 @@ class OccurrenceMaintenance {
 						WHERE o.collid = '.$collid.' GROUP BY o.country ';
 					$rs = $this->conn->query($sql);
 					while($r = $rs->fetch_object()){
-						$country = str_replace(array('"',"'"),"",$r->country);
-						if($country){
+						if($r->country){
+							$country = str_replace(array('"', "'"), "", $r->country);
 							$statsArr['countries'][$country]['CountryCount'] = $r->CountryCount;
 							$statsArr['countries'][$country]['GeorefSpecimensPerCountry'] = $r->GeorefSpecimensPerCountry;
 							$statsArr['countries'][$country]['IDSpecimensPerCountry'] = $r->IDSpecimensPerCountry;
