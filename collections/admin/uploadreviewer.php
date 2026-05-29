@@ -1,7 +1,10 @@
 <?php
 include_once('../../config/symbini.php');
 include_once($SERVER_ROOT.'/classes/SpecUpload.php');
-include_once($SERVER_ROOT.'/content/lang/collections/admin/uploadreviewer.'.$LANG_TAG.'.php');
+include_once($SERVER_ROOT . '/classes/utilities/Language.php');
+
+Language::load('collections/admin/uploadreviewer');
+
 header("Content-Type: text/html; charset=".$CHARSET);
 
 $collid = array_key_exists('collid',$_REQUEST)?$_REQUEST['collid']:0;
@@ -33,8 +36,8 @@ $recCnt = $uploadManager->getUploadCount();
 $navStr = '<div style="float:right;">';
 if($SYMB_UID){
 	if(($pageIndex) >= $recLimit){
-		$navStr .= '<a href="uploadreviewer.php?collid='.$collid.'&reclimit='.$reclimit.'&pageindex=0" title="First page">|&lt;&lt;</a> | ';
-		$navStr .= '<a href="uploadreviewer.php?collid='.$collid.'&reclimit='.$reclimit.'&pageindex='.($pageIndex-1).'" title="Previous '.$recLimit.' record">&lt;&lt;</a>';
+		$navStr .= '<a href="uploadreviewer.php?collid=' . htmlspecialchars($collid, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '&reclimit=' . htmlspecialchars($reclimit, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '&pageindex=0" title="First page">|&lt;&lt;</a> | ';
+		$navStr .= '<a href="uploadreviewer.php?collid=' . htmlspecialchars($collid, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '&reclimit=' . htmlspecialchars($reclimit, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '&pageindex=' . htmlspecialchars(($pageIndex-1), ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '" title="Previous ' . htmlspecialchars($recLimit, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . ' record">&lt;&lt;</a>';
 	}
 	else{
 		$navStr .= '|&lt;&lt;</a> | &lt;&lt;';
@@ -44,8 +47,8 @@ if($SYMB_UID){
 	$navStr .= (($pageIndex*$recLimit)+1).'-'.($recCnt<$highRange?$recCnt:$highRange).' of '.$recCnt.' records';
 	$navStr .= ' | ';
 	if($recCnt > $highRange){
-		$navStr .= '<a href="uploadreviewer.php?collid='.$collid.'&reclimit='.$reclimit.'&pageindex='.($pageIndex+1).'" title="Next '.$recLimit.' records">&gt;&gt;</a> | ';
-		$navStr .= '<a href="uploadreviewer.php?collid='.$collid.'&reclimit='.$reclimit.'&pageindex='.($recCnt/$recLimit).'" title="Last page">&gt;&gt;|</a>';
+		$navStr .= '<a href="uploadreviewer.php?collid=' . htmlspecialchars($collid, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '&reclimit=' . htmlspecialchars($reclimit, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '&pageindex=' . htmlspecialchars(($pageIndex+1), ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '" title="Next ' . htmlspecialchars($recLimit, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . ' records">&gt;&gt;</a> | ';
+		$navStr .= '<a href="uploadreviewer.php?collid=' . htmlspecialchars($collid, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '&reclimit=' . htmlspecialchars($reclimit, ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '&pageindex=' . htmlspecialchars(($recCnt/$recLimit), ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '" title="Last page">&gt;&gt;|</a>';
 	}
 	else{
 		$navStr .= '&gt;&gt; | &gt;&gt;|';
@@ -54,7 +57,8 @@ if($SYMB_UID){
 }
 */
 ?>
-<html>
+<!DOCTYPE html>
+<html lang="<?php echo $LANG_TAG ?>">
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=<?php echo $CHARSET; ?>">
 	<title><?php echo (isset($LANG['UP_PREVIEW'])?$LANG['UP_PREVIEW']:'Record Upload Preview'); ?></title>
@@ -68,6 +72,7 @@ if($SYMB_UID){
 	?>
 </head>
 <body style="margin-left: 0px; margin-right: 0px;background-color:white;">
+	<h1 class="page-heading"><?php echo $LANG['DATA_UPLOAD_REVIEWER']; ?></h1>
 	<!-- inner text -->
 	<div id="">
 		<?php
@@ -78,17 +83,32 @@ if($SYMB_UID){
 			//Setup header map
 			$recArr = $uploadManager->getPendingImportData(($recLimit*$pageIndex),$recLimit,$searchVar);
 			if($recArr){
+				$excludeKeys = ['paleo_eon', 'paleo_era', 'paleo_period', 'paleo_epoch', 'paleo_stage'];
 				//Check to see which headers have values
 				$headerArr = array();
+				$matSampleHeaderArr = array();
 				foreach($recArr as $occurArr){
 					foreach($occurArr as $k => $v){
-						if(trim($v) && !array_key_exists($k,$headerArr)){
-							$headerArr[$k] = $k;
+						if($v && trim($v) && !array_key_exists($k,$headerArr) && !in_array($k, $excludeKeys)){
+							if($k == 'materialsamplejson'){
+								if($matSampleObj = json_decode($v)){
+									foreach($matSampleObj as $matKey => $matValue){
+										$matSampleHeaderArr[$matKey] = $matKey;
+									}
+								}
+							}
+							elseif (strpos($k, 'paleo_') === 0)
+								$headerArr[$k] = substr($k, 6);
+							else $headerArr[$k] = $k;
 						}
 					}
 				}
+				foreach($matSampleHeaderArr as $matFieldName){
+					//Material Sample records exists, thus add to header array
+					$headerArr[$matFieldName] = $matFieldName;
+				}
 				$translationMap = array('catalognumber' => 'catalogNumber','occurrenceid' => 'occurrenceID','othercatalognumbers' => 'otherCatalogNumbers',
-					'identificationqualifier' => 'identificationQualifier','sciname' => 'scientificName','scientificnameauthorship'=>'scientificNameAuthorship',
+					'identificationqualifier' => 'identificationQualifier','scientificname' => 'scientificName-input','sciname' => 'scientificName','scientificnameauthorship'=>'scientificNameAuthorship',
 					'recordedby' => 'recordedBy (collector)','recordnumber' => 'Number','associatedcollectors' => 'associatedCollectors','eventdate' => 'eventDate',
 					'verbatimeventdate' => 'verbatimEventDate','identificationremarks' => 'identificationRemarks','taxonremarks' => 'taxonRemarks','identifiedby' => 'identifiedBy',
 					'dateidentified' => 'dateIdentified','identificationreferences' => 'identificationReferences','stateprovince' => 'stateProvince',
@@ -99,11 +119,11 @@ if($SYMB_UID){
 					'minimumdepthinmeters' => 'minimumDepthInMeters','maximumdepthinmeters' => 'maximumDepthInMeters','verbatimdepth' => 'verbatimDepth',
 					'occurrenceremarks' => 'occurrenceRemarks','associatedsequences' => 'associatedSequences','associatedtaxa' => 'associatedTaxa','verbatimattributes' => 'verbatimAttributes',
 					'lifestage' => 'lifeStage', 'individualcount' => 'individualCount','samplingprotocol' => 'samplingProtocol', 'reproductivecondition' => 'reproductiveCondition',
-					'typestatus' => 'typeStatus','cultivationstatus' => 'cultivationStatus','establishmentmeans' => 'establishmentMeans','duplicatequantity' => 'duplicatequantity',
+					'typestatus' => 'typeStatus','cultivationstatus' => 'cultivationStatus','cultivarepithet' => 'cultivarEpithet', 'tradename' => 'tradeName', 'establishmentmeans' => 'establishmentMeans','duplicatequantity' => 'duplicatequantity',
 					'datelastmodified' => 'dateLastModified','processingstatus' => 'processingStatus','recordenteredby' => 'recordEnteredBy',
 					'basisofrecord' => 'basisOfRecord','occid' => 'occid (Primary Key)','dbpk'=>'dbpk (Source Identifier)');
 				?>
-				<table class="styledtable" style="font-family:Arial;font-size:12px;">
+				<table class="styledtable" style="font-size:12px;">
 					<tr>
 						<?php
 						foreach($headerArr as $k => $v){
@@ -118,15 +138,23 @@ if($SYMB_UID){
 					foreach($recArr as $id => $occArr){
 						if($occArr['sciname']) $occArr['sciname'] = '<i>'.$occArr['sciname'].'</i> ';
 						echo "<tr ".($cnt%2?'class="alt"':'').">\n";
+						$matSampleArr = array();
+						if(!empty($occArr['materialsamplejson'])){
+							$matSampleArr = json_decode($occArr['materialsamplejson'], true);
+						}
 						foreach($headerArr as $k => $v){
-							$displayStr = $occArr[$k];
-							if(strlen($displayStr) > 60){
-								$displayStr = substr($displayStr,0,60).'...';
+							$displayStr = '';
+							if(!empty($occArr[$k])) $displayStr = $occArr[$k];
+							if(!empty($matSampleArr[$k])) $displayStr = $matSampleArr[$k];
+							if($displayStr){
+								if(strlen($displayStr) > 60){
+									$displayStr = substr($displayStr,0,60).'...';
+								}
+								if($k == 'occid' && $searchVar != 'new') {
+									$displayStr = '<a href="../editor/occurrenceeditor.php?occid='.$displayStr.'" target="_blank">'.$displayStr.'</a>';
+								}
 							}
-							if($k == 'occid' && $displayStr && $searchVar != 'new') {
-								$displayStr = '<a href="../editor/occurrenceeditor.php?occid='.$displayStr.'" target="_blank">'.$displayStr.'</a>';
-							}
-							if(!$displayStr) $displayStr = '&nbsp;';
+							else $displayStr = '&nbsp;';
 							echo '<td>'.$displayStr.'</td>'."\n";
 						}
 						echo "</tr>\n";

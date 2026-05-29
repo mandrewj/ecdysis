@@ -18,9 +18,10 @@ if($IS_ADMIN){
 $eolManager = new EOLManager();
 
 ?>
-<html>
+<!DOCTYPE html>
+<html lang="<?php echo $LANG_TAG ?>">
 <head>
-	<title><?php echo $DEFAULT_TITLE." EOL Manager: "; ?></title>
+	<title><?php echo $DEFAULT_TITLE . " EOL Manager: "; ?></title>
 	<meta http-equiv="Content-Type" content="text/html; charset=<?php echo $CHARSET;?>"/>
 	<?php
 	include_once($SERVER_ROOT.'/includes/head.php');
@@ -39,8 +40,8 @@ include($SERVER_ROOT.'/includes/header.php');
 	<b>Encyclopedia of Life Manager</b>
 </div>
 	<!-- This is inner text! -->
-	<div id="innertext">
-		<h1>Encyclopedia of Life Linkage Manager</h1>
+	<div role="main" id="innertext">
+		<h1 class="page-heading">Encyclopedia of Life Linkage Mapper</h1>
 		<?php
 		if($statusStr){
 			?>
@@ -114,7 +115,7 @@ include($SERVER_ROOT.'/includes/header.php');
 						Up to 5 images will be automatically linked in the mapping procedure.
 					</div>
 					<div style="margin:10px;">
-						Number of accpeted taxa without images:
+						Number of accepted taxa without images:
 						<b><?php echo $eolManager->getImageDeficiencyCount(); ?></b>
 						<div style="margin:10px;">
 							<form name="imagemappingform" action="eolmapper.php" method="post">

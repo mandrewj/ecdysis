@@ -7,7 +7,7 @@ return [
         | Edit to set the api's title
         |--------------------------------------------------------------------------
          */
-        'title' => 'Swagger Lume API',
+        'title' => 'Symbiota API',
     ],
 
     'routes' => [
@@ -182,7 +182,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'operations_sort' => env('L5_SWAGGER_OPERATIONS_SORT', null),
+    'operations_sort' => env('L5_SWAGGER_OPERATIONS_SORT', 'alpha'),
 
     /*
     |--------------------------------------------------------------------------

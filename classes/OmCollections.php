@@ -1,6 +1,10 @@
 <?php
-include_once($SERVER_ROOT.'/classes/Manager.php');
-include_once($SERVER_ROOT.'/classes/UuidFactory.php');
+
+include_once($SERVER_ROOT . '/classes/Manager.php');
+include_once($SERVER_ROOT . '/classes/utilities/GeneralUtil.php');
+include_once($SERVER_ROOT . '/classes/utilities/QueryUtil.php');
+include_once($SERVER_ROOT . '/classes/utilities/UuidFactory.php');
+include_once($SERVER_ROOT . '/classes/utilities/UploadUtil.php');
 
 class OmCollections extends Manager{
 
@@ -14,10 +18,46 @@ class OmCollections extends Manager{
 		parent::__destruct();
 	}
 
+	// Needed to 
+	public function isCollUnique(String $collectionCode, String $institutionCode): bool {
+		global $CLIENT_ROOT;
+		try {
+			$sql = <<<'SQL'
+			SELECT collectionName, collid FROM omcollections 
+			WHERE collid != ? AND collectionCode = ? AND institutionCode = ?
+			SQL;
+			$result = QueryUtil::executeQuery($this->conn, $sql, [$this->collid, $collectionCode, $institutionCode]);
+			if($col = $result->fetch_object()) {
+				$this->errorMessage = 'Error: Duplicate collection + institution code found in ' 
+					. '<a target="_blank" href="'
+					. $CLIENT_ROOT 
+					. '/collections/misc/collprofiles.php?collid='
+					. $col->collid 
+					. '">'
+					. $col->collectionName 
+					.'</a>';
+
+				return false;
+			} else {
+				return true;
+			}
+		} catch (\Throwable $th) {
+			error_log('error: Omcollections->isCollUnique: ' . $th->getMessage());
+			$this->errorMessage = $th->getMessage();
+			return false;
+		}
+	}
+
 	public function collectionUpdate($postArr){
 		$status = false;
 		if($this->collid){
 			$reqArr = $this->getRequestArr($postArr);
+			if(!$this->isCollUnique($reqArr['collectionCode'], $reqArr['institutionCode'])) {
+				return false;
+			} elseif($this->errorMessage) {
+				return false;
+			}
+
 			//Update core fields
 			$sql = 'UPDATE omcollections '.
 				'SET institutionCode = ?, collectionCode = ?, collectionName = ?, collectionID = ?, fullDescription = ?, latitudeDecimal = ?, longitudeDecimal = ?, publishToGbif = ?, '.
@@ -125,7 +165,13 @@ class OmCollections extends Manager{
 		$retArr['rightsHolder'] = ($postArr['rightsHolder']?trim($postArr['rightsHolder']):NULL);
 		$retArr['accessRights'] = ($postArr['accessRights']?trim($postArr['accessRights']):NULL);
 		$retArr['individualUrl'] = ($postArr['individualUrl']?trim($postArr['individualUrl']):NULL);
-		if(isset($_FILES['iconFile']['name']) && $_FILES['iconFile']['name']) $retArr['icon'] = $this->addIconImageFile($postArr);
+		if(isset($_FILES['iconFile']['name']) && $_FILES['iconFile']['name']) {
+			try {
+				$retArr['icon'] = $this->addIconImageFile($postArr);
+			} catch(Exception $e) {
+				$this->errorMessage = 'ERROR: ' . $e->getMessage();
+			}
+		}
 		elseif(isset($postArr['iconUrl']) && $postArr['iconUrl']) $retArr['icon'] = trim($postArr['iconUrl']);
 		elseif(isset($postArr['icon']) && $postArr['icon']) $retArr['icon'] = trim($postArr['icon']);
 		else $retArr['icon'] = NULL;
@@ -135,15 +181,20 @@ class OmCollections extends Manager{
 			if(isset($postArr['sortSeq']) && is_numeric($postArr['sortSeq'])) $retArr['sortSeq'] = $postArr['sortSeq'];
 		}
 		if(isset($postArr['ccpk']) && is_numeric($postArr['ccpk'])) $retArr['ccpk'] = $postArr['ccpk'];
-		$retArr['securityKey'] = (isset($postArr['securityKey'])?$postArr['securityKey']:NULL);
-		$retArr['collectionGuid'] = (isset($postArr['collectionGuid'])?$postArr['collectionGuid']:NULL);
-		if(!$postArr['recordID'] && isset($postArr['recordID'])) $retArr['collectionGuid'] = $postArr['recordID'];
+		$retArr['securityKey'] = (!empty($postArr['securityKey'])?$postArr['securityKey']:NULL);
+		$retArr['collectionGuid'] = (!empty($postArr['collectionGuid'])?$postArr['collectionGuid']:NULL);
+		if(!$retArr['collectionGuid'] && !empty($postArr['recordID'])) $retArr['collectionGuid'] = $postArr['recordID'];
 		return $retArr;
 	}
 
 	private function addIconImageFile($postArr){
 		$targetPath = $GLOBALS['SERVER_ROOT'].'/content/collicon/';
-		$urlBase = $this->getDomain().$GLOBALS['CLIENT_ROOT'].'/content/collicon/';
+		$urlBase = GeneralUtil::getDomain() . $GLOBALS['CLIENT_ROOT'] . '/content/collicon/';
+
+		UploadUtil::checkFileUpload(
+			$_FILES['iconFile'],
+			['image/jpeg', 'image/png', 'image/gif']
+		);
 
 		//Clean file name
 		$fileName = basename($_FILES['iconFile']['name']);
@@ -239,7 +290,7 @@ class OmCollections extends Manager{
 			}
 			$rs->free();
 		}
-		return json_decode($jsonStr,true);
+		return $jsonStr? json_decode($jsonStr,true): [];
 	}
 
 	//Institution address functions

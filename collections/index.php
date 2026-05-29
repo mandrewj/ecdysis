@@ -1,23 +1,32 @@
 <?php
 include_once('../config/symbini.php');
-include_once($SERVER_ROOT.'/content/lang/collections/index.'.$LANG_TAG.'.php');
 include_once($SERVER_ROOT.'/classes/OccurrenceManager.php');
+include_once($SERVER_ROOT . '/classes/utilities/Language.php');
+include_once($SERVER_ROOT . '/classes/CollectionFormManager.php');
+
+Language::load([
+	'collections/sharedterms',
+	'collections/index', 
+	'collections/search/index',
+]);
+
 header("Content-Type: text/html; charset=".$CHARSET);
 
-$catId = array_key_exists("catid",$_REQUEST)?$_REQUEST["catid"]:'';
-if(!preg_match('/^[,\d]+$/',$catId)) $catId = '';
-if($catId == '' && isset($DEFAULTCATID)) $catId = $DEFAULTCATID;
 
 $collManager = new OccurrenceManager();
-//$collManager->reset();
-
-$collList = $collManager->getFullCollectionList($catId);
-$specArr = (isset($collList['spec'])?$collList['spec']:null);
-$obsArr = (isset($collList['obs'])?$collList['obs']:null);
+$collManager->reset();
+$currentPage = $_SERVER['REQUEST_URI'];
 
 $otherCatArr = $collManager->getOccurVoucherProjects();
+
+$collectionFormManager = new CollectionFormManager();
+$requestSuppliedCatOrd = (array_key_exists('catOrd', $_REQUEST) && $collectionFormManager->areCollectionIdsValid($_REQUEST['catOrd'])) ? explode(',', $_REQUEST['catOrd']) : null;
+$requestSuppliedCatExpnd = (array_key_exists('catExpnd', $_REQUEST) && $collectionFormManager->areCollectionCategoriesValid($_REQUEST['catExpnd'])) ? explode(',', $_REQUEST['catExpnd']) : null;
+$requestSuppliedCatChk = (array_key_exists('catChk', $_REQUEST) && $collectionFormManager->areCollectionCategoriesValid($_REQUEST['catChk'])) ? explode(',', $_REQUEST['catChk']) : null;
+
 ?>
-<html>
+<!DOCTYPE html>
+<html lang="<?php echo $LANG_TAG ?>">
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=<?php echo $CHARSET;?>">
 		<title><?php echo $DEFAULT_TITLE.' '.$LANG['PAGE_TITLE']; ?></title>
@@ -25,11 +34,14 @@ $otherCatArr = $collManager->getOccurVoucherProjects();
 		include_once($SERVER_ROOT.'/includes/head.php');
 		include_once($SERVER_ROOT.'/includes/googleanalytics.php');
 		?>
-		<link href="<?php echo $CSS_BASE_PATH; ?>/symbiota/collections/listdisplay.css" type="text/css" rel="stylesheet" />
-		<script src="../js/jquery-3.2.1.min.js" type="text/javascript"></script>
-		<script src="../js/jquery-ui/jquery-ui.min.js" type="text/javascript"></script>
-		<link href="../js/jquery-ui/jquery-ui.min.css" type="text/css" rel="Stylesheet" />
-		<script src="../js/symb/collections.index.js?ver=20171215" type="text/javascript"></script>
+		<link href="<?= $CSS_BASE_PATH; ?>/symbiota/collections/listdisplay.css" type="text/css" rel="stylesheet" />
+		<link href="<?= $CSS_BASE_PATH ?>/symbiota/collections/sharedCollectionStyling.css" type="text/css" rel="stylesheet" />
+		<link href="<?= $CSS_BASE_PATH; ?>/jquery-ui.css" type="text/css" rel="stylesheet">
+		<link href="<?= $CSS_BASE_PATH ?>/searchStyles.css?ver=1" type="text/css" rel="stylesheet">
+		<link href="<?= $CSS_BASE_PATH ?>/searchStylesInner.css" type="text/css" rel="stylesheet">
+		<script src="<?= $CLIENT_ROOT; ?>/js/jquery-3.7.1.min.js" type="text/javascript"></script>
+		<script src="<?= $CLIENT_ROOT; ?>/js/jquery-ui.min.js" type="text/javascript"></script>
+		<script src="<?= $CLIENT_ROOT ?>/js/alerts.js?v=202107" type="text/javascript"></script>
 		<script type="text/javascript">
 			$(document).ready(function() {
 				$('#tabs').tabs({
@@ -40,8 +52,25 @@ $otherCatArr = $collManager->getOccurVoucherProjects();
 						$(ui.panel).html("<p>Loading...</p>");
 					}
 				});
-				sessionStorage.querystr = null;
-				//document.collections.onkeydown = checkKey;
+			});
+		</script>
+		<script type="text/javascript">
+			$(document).ready(function() {
+				setSessionQueryStr();
+				setSearchForm(document.getElementById("params-form"));
+				toggleAccordionsFromSessionStorage(sessionStorage.getItem("querystr" + getCurrentPage() + "/" + "accordionIds") ?.split(",") || []);
+				document.getElementById("params-form").addEventListener("submit", function(event) {
+					event.preventDefault();
+					simpleSearch();
+				});
+				document.getElementById("reset-btn").addEventListener("click", function (event) {
+					document.getElementById("params-form").reset();
+					clearPageSpecificSessionStorageItems();
+					checkTheCollectionsThatShouldBeCheckedBasedOnConfig();
+					closeAllCategories();
+					expandCategoriesBasedOnConfig();
+					updateChip(event, isInitialConfig=true);
+				});
 			});
 		</script>
 	</head>
@@ -53,133 +82,53 @@ $otherCatArr = $collManager->getOccurVoucherProjects();
 		if($collections_indexCrumbs){
 			echo '<div class="navpath">';
 			echo $collections_indexCrumbs;
-			echo ' <b>'.$LANG['NAV_COLLECTIONS'].'</b>';
+			echo ' <b>' . $LANG['NAV_COLLECTIONS'] . '</b>';
 			echo '</div>';
 		}
 	}
 	else{
 		echo '<div class="navpath">';
-		echo '<a href="../index.php">'.(isset($LANG['NAV_HOME'])?$LANG['NAV_HOME']:'Home').'</a> &gt;&gt; ';
-		echo '<b>'.(isset($LANG['NAV_COLLECTIONS'])?$LANG['NAV_COLLECTIONS']:'Collections').'</b>';
+			echo '<a href="../index.php">' . htmlspecialchars((isset($LANG['NAV_HOME'])?$LANG['NAV_HOME']:'Home'), ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE) . '</a>';
+			echo '&gt;&gt; ';
+			echo '<b>' . (isset($LANG['NAV_COLLECTIONS']) ? $LANG['NAV_COLLECTIONS'] : 'Collections') . '</b>';
 		echo "</div>";
 	}
 	?>
 	<!-- This is inner text! -->
-	<div id="innertext">
-        <div id="tabs" style="margin:0px;">
-			<ul>
-				<?php
-				if($specArr && $obsArr) echo '<li><a href="#specobsdiv">'.(isset($LANG['TAB_1'])?$LANG['TAB_1']:'Specimens & Observations').'</a></li>';
-				if($specArr) echo '<li><a href="#specimendiv">'.(isset($LANG['TAB_2'])?$LANG['TAB_2']:'Specimens').'</a></li>';
-				if($obsArr) echo '<li><a href="#observationdiv">'.(isset($LANG['TAB_3'])?$LANG['TAB_3']:'Observations').'</a></li>';
-				if($otherCatArr) echo '<li><a href="#otherdiv">'.(isset($LANG['TAB_4'])?$LANG['TAB_4']:'Federal Units').'</a></li>';
-				?>
-			</ul>
-			<?php
-			if($specArr && $obsArr){
-				?>
-				<div id="specobsdiv">
-					<form name="collform1" action="harvestparams.php" method="post" onsubmit="return verifyCollForm(this)">
-						<div style="margin:0px 0px 10px 5px;">
-							<input id="dballcb" name="db[]" class="specobs" value='all' type="checkbox" onclick="selectAll(this);" checked />
-					 		<?php echo $LANG['SELECT_DESELECT'].' <a href="misc/collprofiles.php">'.$LANG['ALL_COLLECTIONS'].'</a>'; ?>
-						</div>
-						<?php
-						$collManager->outputFullCollArr($specArr, $catId);
-						if($specArr && $obsArr) echo '<hr style="clear:both;margin:20px 0px;"/>';
-						$collManager->outputFullCollArr($obsArr, $catId);
-						?>
-						<div style="clear:both;">&nbsp;</div>
-					</form>
+	<div role="main" id="innertext" class="inntertext-tab pin-things-here inner-search">
+		<h1 class="page-heading screen-reader-only"><?php echo $LANG['COLLECTION_LIST']; ?></h1>
+		<div id="error-msgs" class="errors"></div>
+		<!-- <form  class="content" id="params-form" action="harvestparams.php" method="post" onsubmit="preventDefault(); return validateForm();"> -->
+		<form  class="content" id="params-form" method="post" action="harvestparams.php" style="grid-template-columns: none;">
+			<div style="display: flex; justify-content: flex-end; position: sticky; top: 1rem;">
+				<button style="width: 75px; margin-right: 0.5rem;" id="search-btn" type="submit" name="action"><?php echo isset($LANG['SEARCH'])?$LANG['SEARCH']:'Search &gt'; ?></button>
+				<button style="margin-right: 0.5rem; background-color: var(--medium-color); width: 75px;" id="reset-btn" type="button"><?php echo $LANG['RESET'] ?></button>
+			</div>
+			<fieldset style="margin-top:1rem;">
+				<div id="search-form-colls">
+					<?php
+						include($SERVER_ROOT . '/collections/collectionForm.php');
+					?>
 				</div>
-				<?php
-			}
-			if($specArr){
-				?>
-				<div id="specimendiv">
-					<form name="collform2" action="harvestparams.php" method="post" onsubmit="return verifyCollForm(this)">
-						<div style="margin:0px 0px 10px 20px;">
-							<input id="dballspeccb" name="db[]" class="spec" value='allspec' type="checkbox" onclick="selectAll(this);" checked />
-					 		<?php echo $LANG['SELECT_DESELECT'].' <a href="misc/collprofiles.php">'.$LANG['ALL_COLLECTIONS'].'</a>'; ?>
-						</div>
-						<?php
-						$collManager->outputFullCollArr($specArr, $catId);
-						?>
-						<div style="clear:both;">&nbsp;</div>
-					</form>
-				</div>
-				<?php
-			}
-			if($obsArr){
-				?>
-				<div id="observationdiv">
-					<form name="collform3" action="harvestparams.php" method="post" onsubmit="return verifyCollForm(this)">
-						<div style="margin:0px 0px 10px 20px;">
-							<input id="dballobscb" name="db[]" class="obs" value='allobs' type="checkbox" onclick="selectAll(this);" checked />
-					 		<?php echo $LANG['SELECT_DESELECT'].' <a href="misc/collprofiles.php">'.$LANG['ALL_COLLECTIONS'].'</a>'; ?>
-						</div>
-						<?php
-						$collManager->outputFullCollArr($obsArr, $catId);
-						?>
-						<div style="clear:both;">&nbsp;</div>
-					</form>
-				</div>
-				<?php
-			}
-			if($otherCatArr && isset($otherCatArr['titles'])){
-				$catTitleArr = $otherCatArr['titles']['cat'];
-				asort($catTitleArr);
-				?>
-				<div id="otherdiv">
-					<form id="othercatform" action="harvestparams.php" method="post" onsubmit="return verifyOtherCatForm(this)">
-						<?php
-						foreach($catTitleArr as $catPid => $catTitle){
-							?>
-							<fieldset style="margin:10px;padding:10px;">
-								<legend style="font-weight:bold;"><?php echo $catTitle; ?></legend>
-								<div style="margin:0px 15px;float:right;">
-									<button type="submit" name="submitaction"><?php echo isset($LANG['BUTTON_NEXT'])?$LANG['BUTTON_NEXT']:'Next >'; ?></button>
-								</div>
-								<?php
-								$projTitleArr = $otherCatArr['titles'][$catPid]['proj'];
-								asort($projTitleArr);
-								foreach($projTitleArr as $pid => $projTitle){
-									?>
-									<div>
-										<a href="#" onclick="togglePid('<?php echo $pid; ?>');return false;"><img id="plus-pid-<?php echo $pid; ?>" src="../images/plus_sm.png" /><img id="minus-pid-<?php echo $pid; ?>" src="../images/minus_sm.png" style="display:none;" /></a>
-										<input name="pid[]" type="checkbox" value="<?php echo $pid; ?>" onchange="selectAllPid(this);" />
-										<b><?php echo $projTitle; ?></b>
-									</div>
-									<div id="pid-<?php echo $pid; ?>" style="margin:10px 15px;display:none;">
-										<?php
-										$clArr = $otherCatArr[$pid];
-										asort($clArr);
-										foreach($clArr as $clid => $clidName){
-											?>
-											<div>
-												<input name="clid[]" class="pid-<?php echo $pid; ?>" type="checkbox" value="<?php echo $clid; ?>" />
-												<?php echo $clidName; ?>
-											</div>
-											<?php
-										}
-										?>
-									</div>
-									<?php
-								}
-								?>
-							</fieldset>
-							<?php
-						}
-						?>
-					</form>
-				</div>
-				<?php
-			}
-			?>
-		</div>
+			</fieldset>
+		</form>
 	</div>
 	<?php
 	include($SERVER_ROOT.'/includes/footer.php');
 	?>
 	</body>
+	<script src="<?= $CLIENT_ROOT ?>/js/symb/collections.list.js?ver=20251002>" type="text/javascript"></script>
+	<script src="<?= $CLIENT_ROOT ?>/js/symb/searchform.js?ver=2" type="text/javascript"></script>
+	<script src="../js/symb/collections.index.js?ver=20171215" type="text/javascript"></script>
+	<script type="text/javascript">
+	$(document).ready(function() {
+		const searchBtn = document.getElementById("search-btn");
+		searchBtn.addEventListener("click", function(event) {
+			const form = document.getElementById("params-form");
+			event.preventDefault();
+			simpleSearch();
+		});
+		
+	});
+</script>
 </html>

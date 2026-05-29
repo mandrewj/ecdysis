@@ -4,6 +4,10 @@ include_once($SERVER_ROOT.'/classes/SpecProcessorManager.php');
 include_once($SERVER_ROOT.'/classes/SpecProcNlpBryophyte.php');
 include_once($SERVER_ROOT.'/classes/SpecProcNlpLichen.php');
 include_once($SERVER_ROOT.'/classes/SpecProcNlpSalix.php');
+include_once($SERVER_ROOT . '/classes/utilities/Language.php');
+
+Language::load('collections/specprocessor/specprocessor_tools');
+
 header("Content-Type: text/html; charset=".$CHARSET);
 if(!$SYMB_UID) header('Location: ../../profile/index.php?refurl=../collections/specprocessor/index.php?'.htmlspecialchars($_SERVER['QUERY_STRING'], ENT_QUOTES));
 
@@ -36,8 +40,8 @@ if($isEditor){
 }
 ?>
 <!-- This is inner text! -->
-<div id="innertext">
-	<h1>NLP Processor</h1>
+<div role="main" id="innertext">
+	<h1><?php echo $LANG['NLP_PROCESSOR']; ?></h1>
 	<?php 
 	if($status){ 
 		?>
@@ -53,19 +57,19 @@ if($isEditor){
 		?>
 		<div style="height:400px;">
 			<div style="margin:5px;">
-				Unprocessed Specimens: 
+				<?php echo $LANG['UNPROCESSED_SPECS']; ?>: 
 				<?php 
 				echo $unprocessedCnt; 
 				?>
 			</div>
 			<div style="margin:5px;">
-				Unprocessed Specimens without Images: 
+				<?php echo $LANG['UNPROCESSED_SPECS_NO_IMGS']; ?>: 
 				<?php 
 				echo $procManager->getUnprocSpecNoImage(); 
 				?>
 			</div>
 			<div style="margin:5px;">
-				Unprocessed Specimens without OCR: 
+				<?php echo $LANG['UNPROCESSED_SPECS_NO_OCR']; ?>: 
 				<?php 
 				echo $procManager->getSpecNoOcr(); 
 				?>
@@ -80,13 +84,13 @@ if($isEditor){
 			<?php
 		}
 		else{
-			echo '<div>There are no unprocessed records to </div>';
+			echo '<div>' . $LANG['NO_UNPROCESSED'] .' </div>';
 		}
 	}
 	else{
 		?>
 		<div style='font-weight:bold;color:red;'>
-			Unidentified Error
+			<?php echo $LANG['UNIDENTIFIED_ERROR']; ?>
 		</div>
 		<?php
 	}

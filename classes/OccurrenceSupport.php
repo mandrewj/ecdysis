@@ -126,16 +126,9 @@ class OccurrenceSupport {
 		if($collid) $sqlWhere .= "AND (o.collid = ".$collid.") ";
 		if($catalogNumber) $sqlWhere .= 'AND (o.catalognumber = "'.$catalogNumber.'") ';
 		if($otherCatalogNumbers) $sqlWhere .= 'AND (o.othercatalognumbers = "'.$otherCatalogNumbers.'" OR i.identifiervalue = "'.$otherCatalogNumbers.'") ';
-		if($recordedBy){
-			if(strlen($recordedBy) < 4 || in_array(strtolower($recordedBy),array('best','little'))){
-				//Need to avoid FULLTEXT stopwords interfering with return
-				$sqlWhere .= 'AND (o.recordedby LIKE "%'.$recordedBy.'%") ';
-			}
-			else $sqlWhere .= 'AND (MATCH(f.recordedby) AGAINST("'.$recordedBy.'")) ';
-		}
+		if($recordedBy) $sqlWhere .= 'AND (MATCH(o.recordedby) AGAINST("'.$recordedBy.'" IN BOOLEAN MODE)) ';
 		if($recordNumber) $sqlWhere .= 'AND (o.recordnumber = "'.$recordNumber.'") ';
-		$sql = 'SELECT o.occid, o.recordedby, o.recordnumber, o.eventdate, CONCAT_WS("; ",o.stateprovince, o.county, o.locality) AS locality
-			FROM omoccurrences o LEFT JOIN omoccurrencesfulltext f ON o.occid = f.occid ';
+		$sql = 'SELECT o.occid, o.recordedby, o.recordnumber, o.eventdate, CONCAT_WS("; ",o.stateprovince, o.county, o.locality) AS locality FROM omoccurrences o ';
 		if($otherCatalogNumbers) $sql .= 'LEFT JOIN omoccuridentifiers i ON o.occid = i.occid ';
 		$sql .= 'WHERE '.substr($sqlWhere,4);
 		//echo $sql;
@@ -187,10 +180,13 @@ class OccurrenceSupport {
 	public function getCollectionArr($filter){
 		//Used by /collections/misc/occurrencesearch.php
 		$retArr = array();
-		$filterStr = implode(',', $filter);
-		if($filter && !preg_match('/^[,\d]+$/', $filterStr)) return false;
+		$filterStr = null;
+		if($filter){
+			$filterStr = implode(',', $filter);
+			if(!preg_match('/^[,\d]+$/', $filterStr)) return false;
+		}
 		$sql = 'SELECT collid, collectionname FROM omcollections ';
-		if($filter) $sql .= 'WHERE collid IN('.$filterStr.')';
+		if($filterStr) $sql .= 'WHERE collid IN('.$filterStr.')';
 		$rs = $this->conn->query($sql);
 		while($row = $rs->fetch_object()){
 			$retArr[$row->collid] = $row->collectionname;

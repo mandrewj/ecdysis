@@ -2,15 +2,16 @@
 include_once('../config/symbini.php');
 include_once($SERVER_ROOT.'/classes/ProfileManager.php');
 include_once($SERVER_ROOT.'/classes/Person.php');
-@include_once($SERVER_ROOT.'/content/lang/profile/viewprofile.'.$LANG_TAG.'.php');
+include_once($SERVER_ROOT . '/classes/utilities/Language.php');
+include_once($SERVER_ROOT . '/classes/utilities/Sanitize.php');
+
+Language::load('profile/viewprofile');
+
 header('Content-Type: text/html; charset=' . $CHARSET);
 
-$action = array_key_exists('action', $_REQUEST) ? htmlspecialchars($_REQUEST['action'], HTML_SPECIAL_CHARS_FLAGS) : '';
-$userId = array_key_exists('userid', $_REQUEST) ? filter_var($_REQUEST['userid'], FILTER_SANITIZE_NUMBER_INT) : 0;
-$tabIndex = array_key_exists('tabindex',$_REQUEST) ? filter_var($_REQUEST['tabindex'], FILTER_SANITIZE_NUMBER_INT) : 0;
-
-//Sanitation
-if($action && !preg_match('/^[a-zA-Z0-9\s_]+$/',$action)) $action = '';
+$userId = array_key_exists('userid', $_REQUEST) ? Sanitize::int($_REQUEST['userid']) : 0;
+$tabIndex = array_key_exists('tabindex',$_REQUEST) ? Sanitize::int($_REQUEST['tabindex']) : 0;
+$action = array_key_exists('action', $_REQUEST) ? $_REQUEST['action'] : '';
 
 $isSelf = 0;
 $isEditor = 0;
@@ -35,7 +36,7 @@ $person = null;
 if($isEditor){
 	if($action == 'Submit Edits'){
 		if(!$pHandler->updateProfile($_POST)){
-			$statusStr = (isset($LANG['FAILED'])?$LANG['FAILED']:'Profile update failed!');
+			$statusStr = $LANG['FAILED'];
 		}
 		$person = $pHandler->getPerson();
 		$tabIndex = 2;
@@ -51,10 +52,14 @@ if($isEditor){
 			$updateStatus = $pHandler->changePassword($newPwd);
 		}
 		if($updateStatus){
-			$statusStr = '<span style="color:green">'.(isset($LANG['PWORD_SUCCESS'])?$LANG['PWORD_SUCCESS']:'Password update successful').'!</span>';
+			$statusStr = '<span style="color:green">' . $LANG['PWORD_SUCCESS'] . '!</span>';
 		}
 		else{
-			$statusStr = '<span style="color:red">'.$LANG['PWD_UPDATE_FAILED'].'</span>';
+			$statusStr = '<span style="color:red">';
+			$errMsg = $pHandler->getErrorMessage();
+			if($errMsg) $statusStr .= $LANG[$errMsg];
+			else $statusStr .= $LANG['PWD_UPDATE_FAILED'];
+			$statusStr .= '</span>';
 		}
 		$person = $pHandler->getPerson();
 		$tabIndex = 2;
@@ -67,8 +72,8 @@ if($isEditor){
 		}
 		else{
 			$statusStr = '<span style="color:red">';
-			if($pHandler->getErrorMessage() == 'loginExists') $statusStr .= $LANG['LOGIN_USED'];
-			elseif($pHandler->getErrorMessage() == 'incorrectPassword') $statusStr .= $LANG['INCORRECT_PWD'];
+			$errMsg = $pHandler->getErrorMessage();
+			if($errMsg) $statusStr .= $LANG[$errMsg];
 			else $statusStr .= $LANG['ERROR_SAVING_LOGIN'];
 			$statusStr .= '</span>';
 		}
@@ -110,21 +115,22 @@ if($isEditor){
 	if(!$person) $person = $pHandler->getPerson();
 }
 ?>
-<html>
+<!DOCTYPE html>
+<html lang="<?= $LANG_TAG ?>">
 <head>
-	<title><?php echo $DEFAULT_TITLE.' - '. (isset($LANG['VIEW_PROFILE'])?$LANG['VIEW_PROFILE']:'View User Profile'); ?></title>
-	<link href="<?php echo $CSS_BASE_PATH; ?>/jquery-ui.css" type="text/css" rel="stylesheet">
+	<title><?= $DEFAULT_TITLE . ' - ' . $LANG['VIEW_PROFILE']; ?></title>
+	<link href="<?= $CSS_BASE_PATH; ?>/jquery-ui.css" type="text/css" rel="stylesheet">
 	<?php
 	include_once($SERVER_ROOT.'/includes/head.php');
 	?>
 	<script type="text/javascript">
-		var tabIndex = <?php echo $tabIndex; ?>;
+		var tabIndex = <?= $tabIndex; ?>;
 	</script>
-	<script type="text/javascript" src="../js/jquery.js"></script>
-	<script type="text/javascript" src="../js/jquery-ui.js"></script>
-	<script type="text/javascript" src="../js/symb/profile.viewprofile.js?ver=20170530"></script>
+	<script src="<?= $CLIENT_ROOT; ?>/js/jquery-3.7.1.min.js" type="text/javascript"></script>
+	<script src="<?= $CLIENT_ROOT; ?>/js/jquery-ui.min.js" type="text/javascript"></script>
+	<script type="text/javascript" src="../js/symb/profile.viewprofile.js?ver=2"></script>
 	<script type="text/javascript" src="../js/symb/shared.js"></script>
-	<style type="text/css">
+	<style>
 		fieldset{ padding:15px;margin:15px; }
 		legend{ font-weight: bold; }
 		.tox-dialog { min-height: 400px }
@@ -136,29 +142,37 @@ if($isEditor){
 	include($SERVER_ROOT.'/includes/header.php');
 	?>
 	<div class="navpath">
-		<a href='../index.php'><?php echo (isset($LANG['HOME'])?$LANG['HOME']:'Home'); ?></a> &gt;&gt;
-		<a href="../profile/viewprofile.php"><?php echo (isset($LANG['MY_PROFILE'])?$LANG['MY_PROFILE']:'My Profile'); ?></a>
+		<a href='../index.php'><?= $LANG['HOME'] ?></a> &gt;&gt;
+		<a href="../profile/viewprofile.php"><?= $LANG['MY_PROFILE'] ?></a>
 	</div>
-	<div id="innertext">
+	<div role="main" id="innertext">
+		<h1 class="page-heading screen-reader-only"><?= $LANG['VIEW_PROFILE']; ?></h1>
 		<?php
 		if($isEditor){
 			if($statusStr) echo $statusStr;
 			?>
 			<div id="tabs" style="margin:10px;">
 				<ul>
+					<li><a href="occurrencemenu.php"><?= $LANG['OCC_MGMNT'] ?></a></li>
 					<?php
-					if($floraModIsActive){
+					if($FLORA_MOD_IS_ACTIVE){
+						$excludeParent = 0;
+						if(!empty($_REQUEST['excludeparent'])) $excludeParent = $_REQUEST['excludeparent'];
 						?>
-						<li><a href="../checklists/checklistadminmeta.php?userid=<?php echo $userId; ?>"><?php echo (isset($LANG['SPEC_CHECKLIST'])?$LANG['SPEC_CHECKLIST']:'Species Checklists'); ?></a></li>
+						<li><a href="../checklists/checklistadminmeta.php?userid=<?= $userId . ($excludeParent ? '&excludeparent=' . $excludeParent : ''); ?>"><?= $LANG['SPECIES_INVENTORIES'] ?></a></li>
+						<?php
+					}
+					if($IS_ADMIN){
+						?>
+						<li><a href="adminmenu.php"><?= $LANG['ADMIN'] ?></a></li>
 						<?php
 					}
 					?>
-					<li><a href="occurrencemenu.php"><?php echo (isset($LANG['OCC_MGMNT'])?$LANG['OCC_MGMNT']:'Occurrence Management'); ?></a></li>
-					<li><a href="userprofile.php?userid=<?php echo $userId; ?>"><?php echo (isset($LANG['USER_PROFILE'])?$LANG['USER_PROFILE']:'User Profile'); ?></a></li>
+					<li><a href="userprofile.php?userid=<?= $userId; ?>"><?= $LANG['USER_PROFILE'] ?></a></li>
 					<?php
 					if($person->getIsTaxonomyEditor()) {
-						echo '<li><a href="specimenstoid.php?userid='.$userId.'&action='.$action.'">'.(isset($LANG['IDS_NEEDED'])?$LANG['IDS_NEEDED']:'IDs Needed').'</a></li>';
-						echo '<li><a href="imagesforid.php">'.(isset($LANG['IMAGES_ID'])?$LANG['IMAGES_ID']:'Images for ID').'</a></li>';
+						echo '<li><a href="specimenstoid.php?userid=' . $userId . '&action=' . Sanitize::outString($action) . '">' . $LANG['IDS_NEEDED'] . '</a></li>';
+						echo '<li><a href="imagesforid.php">' . $LANG['IMAGES_ID'] . '</a></li>';
 					}
 					?>
 				</ul>
