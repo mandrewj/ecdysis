@@ -25,7 +25,7 @@ try {
 	error_log($e->getMessage());
 }
 
-$creatorArray = Media::getCreatorArray();
+$creatorArray = Media::getCreatorArray(false);
 ?>
 <script type="text/javascript">
 	function verifyImgAddForm(f){
@@ -231,7 +231,7 @@ $creatorArray = Media::getCreatorArray();
 										}
 									}
 
-									echo '<img src="' . $displayUrl . '" style="width:250px;" title="'.$imgArr['caption'].'"
+									echo '<img src="' . $displayUrl . '" style="width:250px;overflow-wrap:anywhere;" title="'.$imgArr['caption'].'"
 									alt="Link of image '. $displayUrl .
 									'; Caption: ' . $imgArr['caption'] . 
 									'; Notes: ' . $imgArr['notes'] . 
